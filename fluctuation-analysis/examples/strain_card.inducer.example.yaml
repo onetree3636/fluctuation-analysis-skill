@@ -1,0 +1,40 @@
+# strain_card —— NRRL30420 示例（数值为占位假设，status 标注出处；实测后逐项替换）
+strain: NRRL30420
+M_base:              {value: 0.004,  ci: [0.002, 0.008], status: literature, note: "MA-WGS 量级（Drake），待波动分析替换"}
+M_on_ref:          {value: 0.4,    ci: [0.2, 0.9],     status: assumed,    note: "≈M_base×100；待波动分析（M7-on 组）"}
+M_off:             {value: 0.012,  ci: [0.006, 0.03],  status: assumed,    note: "合格线 ≤3×M_base（规程 §6.4.9）"}
+mu_supply:             {value: 2.0e-8, ci: [1.0e-8, 4.0e-8], status: assumed,  note: "★参数6：供给端标记的波动分析，选定浓度"}
+background_false:  {value: 1.0e-9, status: literature, note: "孢子直接涂选择板；≥1e-4 弃药（示例：S. viridosporus 教训）"}
+tau_on_h:          {value: 2.0,    ci: [1.0, 4.0],     status: assumed,    note: "诱导上升沿，报告基因辅证"}
+tau_off_h:         {value: 5.0,    ci: [0.5, 5.0],     status: assumed,    note: "未测：取稀释上界 1.44×td(39°C, td=3.5 h)=5.0 h；下界 0.5 h 对应加降解标签"}
+# （v0.4 机制模型示例：本文件用 inducer 块替代 F_doses 表；F_doses 保留作对照）
+F_doses:
+  - {dose_mM: 0.03, F: 10,  status: assumed}
+  - {dose_mM: 0.3,  F: 100, status: assumed, note: "参考剂量（CebR 天然系统 0.3 mM）"}
+  - {dose_mM: 3.0,  F: 400, status: assumed}
+ref_dose_mM: 0.3
+td_h_off: 2.0
+td_h_on: 2.5          # 表达负担：M7 表达拖慢生长
+Nt_saturation: 3.0e8  # CFU（检测培养基饱和当量）
+clone_dispersion_sigma_ln: 1.0   # gkab583：克隆间 Rif 频率差 15×
+
+# v0.4：诱导剂机制模型（表达 × 竞争占位）
+# 与 M_on_ref 自洽：0.3 mM 处 h≈0.295 → M = 0.012 + 1.315×0.295 ≈ 0.400
+# 3 mM 处 M ≈ 1.53（F_doses 的 400× ↔ M_on 1.6，两者同批测定时应一致）
+inducer:
+  name: 纤维二糖
+  mixing: linear
+  amplitude: 1.315
+  c50_mM: 0.48        # 速率半饱和剂量（旧名 ec50_mM 也认）
+  n_hill: 1.85
+  q: 1.0
+
+# v0.5：保护区账本（误伤预算）——基因组大小由用户按菌株填
+genome_mb: 8.4            # 按菌株填
+plasmids:
+  - {name: 载体, kb: 16.0, copies: 20}   # 你们构型：载体+mutator 插入的总大小与实测拷贝数
+protected:
+  - {name: "产物基因簇", kb: 22, copies: 1, selection: silent, note: "单拷贝，真乘客风险"}
+  - {name: "mutator 编码区", kb: 3.5, copies: 20, selection: silent, note: "多拷贝，单拷贝命中不致命"}
+  - {name: "抗性基因", kb: 1.0, copies: 20, selection: lethal, note: "选择压下被淘汰，只影响产量"}
+  - {name: "复制子", kb: 2.0, copies: 20, selection: lethal, note: "同上"}

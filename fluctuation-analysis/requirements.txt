@@ -1,0 +1,6 @@
+# 运行时依赖（仅这三个第三方包，无 R、无网络依赖）
+# agent 用 run.py 时不需要手动装：首次运行会自动建 .venv 并安装它们。
+# 想手动装：pip install -r requirements.txt
+numpy>=1.20
+PyYAML>=5.0
+openpyxl>=3.0
