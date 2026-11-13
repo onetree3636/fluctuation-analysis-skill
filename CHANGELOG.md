@@ -1,0 +1,207 @@
+# Changelog
+
+## 0.9.0 — 2026-11-13
+
+（定稿说明：本版合并原「未发布 2026-11-12」与「未发布 2026-11-13」两个工作区区块；
+条目内保留原始日期。11-12 条目中因 11-13 删文件而失效的指针已就地加后注修正。）
+
+### Removed
+- **`multitarget --mode design/fit/classify` 整体移除（2026-11-13，用户拍板）**：
+  三个模式服务的都是"用 μ 外推多靶点供给"的旧路线——供给已改为 `--f-step` 铺板实测，
+  α 不在主路径任何环节被消费。连带删除：`windowcalc/multitarget.py`（421 行，
+  含标度律/α 拟合/S-C-U 判定；C 律恢复公式已在 docs/multitarget-model.md §2 留档）、
+  `--targets/--entry-fraction` 旗标、`mtblocks` 的 `window_table/target_set/first_step_events`
+  （几何三件套）、`tests/test_multitarget.py`（21 项）与 test_mtblocks 的 8 项几何测试。
+  `multitarget` 子命令保留，**等价于 window 主路径**
+  （`--f-step --markers --k --nt --genome-mb [--bgc-kb]`；`--mode` 旗标删除）。
+  S/C/U 概念保留在 `docs/multitarget-extrapolation.md`（规划步数预期用，不进窗口计算）。
+  连带修复 selftest 文档检查的 `known` 子命令集合——v0.8.0 加第 9 个子命令时漏更
+  （硬编码 8 个，任何含 "windowcalc multitarget" 的文档都会被误报未知子命令；
+  现已补齐并加"与 build_parser 保持同步"注释）。
+  路由层同步：SKILL.md（铁律/用户行/子命令表/description）、intake.md（路由表 + 必问改为
+  f_step/标定/k·G·Nt 三样实测）、start-here.md（问题 2 重写）、guardrails.md 重写
+  （f_step 三问 + M 误差棒与 indel 下限）、model/tutorial/extrapolation 顶部加路线收缩注。
+- **C 律（谷型）整体移除（2026-11-12）**。理由：本项目全部是"逐步升浓度"的连续性状协议
+  （如 1 g/L → 5 g/L），中间态在结构上必然可被选择，谷型不会发生；保留它只会让人
+  误以为报告里的 `F^j` 是要认真读的输出。移除范围：
+  `multitarget.t_valley`、`design` 的"C 谷型"行、`F^j` 最坏情况与相关字段、
+  `mtblocks` 的多命中核（`events_multi_hit` / `poisson_sf`）、CLI 的 `--js`。
+  如需恢复：`T_j = s^(j−2)/(2·N·μ^j)`（Iwasa/Michor/Nowak 2004；Armitage & Doll 1954）；
+  公式与推导留档于 `docs/multitarget-model.md` §2（原在 `multitarget.py` 模块头，
+  该文件已随上条移除）。
+
+### Fixed
+- **P0（数字会错）：`p_success` 从 P(≥1) 改为真正的 P(≥k)**。此前 `evaluate`/`monte_carlo`
+  算的是 `1−exp(−events)`（至少 1 个事件的概率），报告与 MC 稳健性门槛却把它标成
+  "P(≥k)"并拿去过滤——大 events 下恒≈100%，`optimize` 的 MC 门槛形同虚设。
+  现在 `evaluate(..., k=)` / `monte_carlo(..., k=)` 接收 k（optimize 传 `k_target_clones`），
+  `p_success` = Poisson 上尾 `poisson_sf(events, k)`——该实现从 optimize.py 提升为
+  model.py 的共享函数（标量/ndarray 皆可；k=1 时逐位退化为旧值，初筛 `_p_succ` 语义不变）。
+  meta 新增 `mc_gate_all_dropped`；报告 §4 在门槛拦下全部候选时给出 ⚠️ 提示。
+  回归测试 ×3（上尾语义 / evaluate 随 k 单调 / MC 随 k 单调）；全量 **179 通过**。
+
+### Added
+- **新子命令 `fstep`**：f_step 铺板记录（step,when,cfu_plated,clones）→ 背景扣除后的
+  可粘贴 `--f-step` 值。单比例 95%CI 用 Wilson（Brown/Cai/DasGupta 2001 推荐；
+  k=0 用 rule of three 上界 3/n，Hanley & Lippman-Hand 1983）；两比例之差用
+  Newcombe (1998) 法 10；f_pre ≥ 0.5×f_post 打背景淹没红灯（protocol-fstep.md §3）。
+  配套：`examples/fstep_template.csv`、回归测试 ×6、selftest 第 23 项、SKILL.md 速查表。
+- **`docs/protocol-fstep.md`**：f_step 铺板规程（配对设计、3/f 板量倒推、Wilson CI 数例、
+  背景扣除、与 μ_supply 的口径关系、七个坑）——全部数字标 [文献]/[推导]/[约定] 三级。
+  §1.1 新增**开跑前基线体检（微型 PAP）**：f_pre 沿浓度档 = 群体 MIC 分布上尾的实测，
+  专抓异质性耐药/持续细胞（f_pre 不随浓度下降 → 停，先做单克隆复测）。
+- **glossary §七**（f_step 时代 9 词条）+ **rate 口径提醒**（频率数据别喂 MSS-MLE，
+  stderr 固定提示）+ SKILL.md 常见坑第 11 条。
+- **文档路由收缩注**：model/tutorial/extrapolation 顶部注明 design/fit/classify 已删除、
+  现行主路径为 `multitarget --f-step`（配套 Removed 条目）。
+- **provenance 逐条标出处（2026-11-12）**：原 `multitarget.py` 模块头逐条标出处与状态；
+  `docs/multitarget-model.md` 新增 §8（经典 Haldane/Iwasa/Armitage–Doll vs 作者综合
+  vs 启发式阈值）+ §8.3 本地可核文献。〔11-13 后注：`multitarget.py` 已随 Removed 条目
+  整体删除，出处记录现由 `windowcalc/mtblocks.py` 模块头与 docs 承接。〕
+- **`windowcalc/mtblocks.py`（2026-11-12）**：多靶点窗口积木层（过原点回归、入口折扣、
+  一阶供给）。发布时配套 `multitarget --mode window`；〔11-13 后注：`--mode` 已删除，
+  现为 `multitarget --f-step` 主路径。〕
+
+### Changed
+- **文档出处补链（仅文档，无代码改动）**：`docs/multitarget-model.md` 新增 §8.4
+  「位点→基因组换算的出处（target-size 法）」——Drake 1998（*Genetics* 148:1667）、
+  Lang & Murray 2008（*Genetics* 178:67，多标记 ÷T_eff 原型）、Lee 2012
+  （*PNAS* 109:E2774，WGS 真值）、Takemoto 2018（`10.1093/nar/gky481`，
+  `T_eff(Rif)≈7 bp` 的同株配对实测出处）、Jee 2016 / Dillon 2016（均匀性 ≥10× 边界）；
+  附外部文献对照（Tanneur 2025 的 MA-WGS 实测，与换算结果同量级）
+  与适用范围提醒（M 只进乘客支路；rRNA 靶标不可外推）。
+  项目内多靶点外推可行性论证文档的引用表补同行四条，
+  §4 的 `T_eff(Rif)≈7 bp` 由"项目口径，需核对"升级为"gky481 同株内部对实测"。
+- **§8.4 追加核对（读 PMC2206112 全文后）**：Lang & Murray 2008 的贡献是
+  「T_eff 实测（207+227 个抗性克隆突变谱 + bootstrap CI）+ 每标记各自除」，它**没有**
+  多标记联合回归——两 loci 每碱基率差 1.7×（URA3 3.80 vs CAN1 6.44 ×10⁻¹⁰/bp/代）
+  且显著，恰是 `mu_perbp` 的 `spread` 检查要抓的对象。合并成单斜率是本工具在
+  "均匀性一阶成立"下的扩展；`spread>2` 报警线与 L&M 自家数据（1.69）相容。
+  已知差距两条：① 本工具 T_eff 靠文献/WGS 自校准，代码未实现"从突变谱测 T_eff"；
+  ② 回归未用 μ_i 的 CI 加权、M 无 CI 传播；速率模块无涂板后生长两参数修正
+  （L&M 实测 1× canavanine/α-factor 因此违反 L-D，靠 10× 浓度规避——本工具靠协议规避）。
+- **L3 对拍环境常驻化（自建 R 参考环境）**：确认 `fluctuation` env（R 4.4.3 + rsalvador 1.9 + flan，
+  由内部部署脚本部署）并实跑复验三组验收数据——Demerec1945
+  **10.84383**（逐位一致）、LD1943_exp16 `newton.LD.plating(e=0.4)` **1.18636**（逐位一致）、
+  plating_z02 **3.173983** vs 本文 3.174（六位一致）。`testing.md` §4/§8 已记录，
+  含"部分涂板必须用 plating 估计器（整板估计器给 0.694）"的现场教训、
+  悬空指针更正（数值记录实际在 `dev/source_code_audit.md` §4），
+  以及 rsalvador 无多标记合并功能、其 foldchange/LRT 系列可供 `compare` 对拍的备注。
+- **垃圾清理（用户确认后执行，2026-11-13）**：删除 `报告_示例.md`（2026-10-26 旧示例，
+  通篇展示未修复的 P0 "P(≥k) 100%" 标签 bug——修复后可重新生成）、
+  `SKILL.md.bak-20261030`、孤儿数据 `data/example_M7on_rif.csv`（全项目无引用）；
+  清理 `__pycache__` 与 `.pytest_cache`（项目源 + 技能副本，运行时产物，自动再生）。
+  `data/` 空目录保留（README 约定的用户 CSV 位置）。
+  【同日已执行】`.bak-20261111/` 移至工作区 `archive/`（保留回滚能力，未删除）；
+  13 个维护者文件移入根目录 `dev/`——**有意偏离"docs/dev"提议**：`docs/` 会被整目录同步进
+  技能副本，`l4_answer_key.md`（L4 盲测答案）绝不能进技能副本，故统一放不同步的 `dev/`；
+  残留引用（README 3 个链接、testing.md、maintainer.md、引擎 docstring）已全部改指 `dev/`，
+  selftest 断链检查通过。
+  【再更新，同日】`dev/` 已按用户指示**整体删除**；`l4_answer_key.md` 移至工作区
+  `archive/l4_answer_key.md`（L4 盲测答案，保留）；README/testing.md 的引用已改为
+  指向 CHANGELOG 与 archive。
+  **另**：技能副本仍是 11-12 午间旧快照（缺 `mtblocks.py` 与 `--f-step`），
+  需用户在可写 shell 跑 `bash sync_skill.sh && python selftest.py`。
+  【2026-11-13 晚更新】同步已完成并验证（7 项逐字节一致；技能副本 selftest **22/22**）。
+- **selftest 增加 [SKIP] 语义**：`run.py`/`bootstrap.py` 按设计只在部署副本
+  （sync_skill.sh「不同步」清单），因此在**项目源**目录跑 selftest 时「入口」一项显示
+  [SKIP]、规范项的 name=目录名 检查自动跳过并打印 note——退出码只由失败项决定。
+  实测：项目源 21 通过 + 1 跳过；部署副本 22/22。此前在项目源跑出的 2 个 FAIL
+  均为此设计差异，非回归。
+- **`--mode window` 主路径改为 `--f-step`（实测，2026-11-12）**：`f_step`（克隆数/CFU）
+  一次性吸收「靶点个数 × 靶点长度 × 有益比例」，因此**不需要**知道多靶点几何。
+  `--targets` 降级为「仅已知靶点的蛋白药（Rif 式）」的可选路线，`--help` 已标注
+  不适用于膜/耐受体系。理由：对"耐受"这种连续性状，靶点个数与长度不可枚举，
+  `T_eff`/`T_set` 属于假精度。〔11-13 后注：`--targets`/`--mode` 均已整体删除，见 Removed。〕
+- **`design` 输出删除"预期代次"表（2026-11-12）**，改为「绝对代次不预测」：`S≫1` 时
+  稀有突变前提失效，该表给出的数字会被误读。`t_wt`/`t_mut` 仍保留在 JSON 里，
+  只是不再渲染。〔11-13 后注：该输出随 `--mode design` 移除而不复存在。〕
+- `mtblocks`（2026-11-12）：`accessible_fraction` → **`entry_fraction`**（明确为
+  "靶点里能当第一步的比例"，ncomms13002 的 colistin = 2/5 ≈ 0.4）；窗口求解改成解析式
+  `N0 ≤ Nt − k/(μ·activity)`，不再需要数值搜索。
+- `SKILL.md` / `docs/multitarget-model.md` / `tutorial` / `glossary` / `extrapolation` /
+  `references/multitarget-guardrails.md` 同步（2026-11-12）：**加速只报线性 ≈ F**；
+  `F^j` 仅保留为"不要当预测"的警示。
+
+## 0.8.0 — 2026-11-11
+
+新增**多靶点外推**（第 9 个子命令 `multitarget`），并收紧"缺参填默认"的行为。
+
+- **新子命令** `multitarget --mode design|fit|classify`：
+  - `design`：算 `N·μ` 饱和 → 三种标度律（单步/串联可选/谷型）预期代次 → 可分辨的 α 区间 → 96 孔排布表。
+    饱和时**不给 α 预测值**（模型前提失效），改为要求直接测 `T_L`。
+  - `fit`：由三档 `(F, T)` 走 log-log 斜率，给 `α` 与 CI；2 档时明确标"CI 不可估"。
+  - `classify`：按抗性证据定 S/C/U（可判 P=表型终止），**缺项降级为 U 并给下一步**，不猜。
+- **默认结论改为线性**：`design` 的输出以「加速 ≈ F 倍」开头，`F^j` 降级为「最坏情况」，并标注"不是预测"。依据：独立多 locus 模型校验（`papers/多靶点抗性-理论/alpha-validation/`）实测 α 在 0.85–1.6，从未接近 j。
+- **关键概念修正**：加速比不是 `F^j`，而是 `F^α`；`F^j` 只在"谷型（中间态不可选）"成立。
+  串联但中间态可选时，等待时间是若干 `1/μ` 的**和**，加速仍是 `F`。
+  并联靶点数 `k` 在 mutator/WT 的**比值**里约掉，只影响绝对时间。
+- **行为收紧（用户明令）**：缺必填参数时**不得静默填默认**。`_require` 的报错升级为"决策级"——
+  讲清默认值/后果/出路，并写明"agent 不得自行添加 `--fill-defaults`"。`multitarget` 用 `--defaults-ok` 显式同意。
+- 新增文档：`docs/multitarget-model.md`（数学）、`docs/multitarget-extrapolation.md`（S/C/U 分类轴）、
+  `docs/resistance-evidence-tiers.md`（证据四级链）、`references/multitarget-intake.md`（给 agent 的 L2 路由）。
+- 自检 21 → **22 项**（新增"缺参 exit 2 + agent 禁令"检查）；pytest 135 → **156 项**。
+
+## 0.7.5 — 2026-10-31
+
+- 新增 `docs/viable-count-problems.md`：活菌计数不准的六种情况（随机误差、低回收、WT/突变体回收不同、团块/链、VBNC、超范围）及诊断与校正/替代计数（显微、超声曲线、spike-in、MPN、qPCR、流式）。
+- 明确 ζ（涂板比例）与 e（回收率）的 Nt 口径区别，避免 `--fraction-plated` 重复校正。
+- `SKILL.md` 与 `docs/knowledge-base.md` 加入口。
+
+## 0.7.4 — 2026-10-30
+
+- 实现 p0 部分涂板的精确稀释模型：`P0 = G(1−ζ)`（L-D PGF，bisection 解 m）；LD16（ζ=0.4）得 0.9787，与 rSalvador `p0.LD.plating=0.97868` 一致。
+- 重跑并更新：ζ 手工 r/ζ 偏差（m=1/C=60/8 reps → 21%/39%/72%；winsor 13%/30%/68%；稀释似然 1.01–1.05）；`power --sim` 功效（C=40 68–72%、60 87%、75 93%、90 96.5%）。
+- 更新 `docs/software_audit_2026-10-30.md` 与 `docs/knowledge-base.md`。
+
+## 0.7.3 — 2026-10-30
+
+文献核实与软件行为修正：
+
+- **Axioms 2023 的 6%/98%**：原文已核（Devin & Couce 2023, Axioms 12:1100；引 Couce & Blázquez 2011），数字逐字一致。
+- **FALCOR CI**：原文确认按 Stewart (1994) 的 ln(m) 正态近似（Foster 2006 近似）。
+- **rSalvador CI**：原文确认所有 CI 均为 likelihood-ratio（profile）法，`confint.LD` 同法。
+- **LD1943 / Demerec 验收数据**：本工具输出与 rSalvador 原文示例逐位一致（Demerec 10.8438 [8.6505,13.1948]；LD16 1.1864 [0.5803,2.0908]）。
+- **p0 交叉核验**：部分涂板（ζ<1）下不再判为有效（p0 未按稀释模型校正），避免误导；以 MSS-MLE 为准。
+- **m<0.3 提示**：新增 stderr 警告（R&F 不建议、精度差）——原来静默输出。
+- 新增 `docs/software_audit_2026-10-30.md`（CLI 行为逐条核对）。
+
+## 0.7.2 — 2026-10-30
+
+- 去质粒化：删掉文档与示例里的具体质粒名；拷贝数 `N` 与限制温度一律由用户提供，治愈代数只保留公式 `ceil(log2 N)`。
+- `T_eff≈7 bp` 标注为“文献口径，需自行核对”。
+
+## 0.7.1 — 2026-10-30
+
+文献核实后的更正（无 API 变更）：
+
+- **四环素靶标**：由误写的 23S 更正为 **30S/16S**；抗性以efflux/核糖体保护为主，rRNA 点突变少见。
+- **rrn 拷贝数**：由"放线菌常有 5–7"改为按属区分（链霉菌 5–7，S. coelicolor 6；分枝杆菌 1–2）。
+- **m>15 估计器**：不再写"MSS 唯一可用"，改为"中位数/p0 不适用；用最大似然类（MSS/GF/NR-MLE）"。
+- **"均值发散"**改为"重尾、样本均值被 jackpot 主导"（有限 Nt 下均值有限）。
+- **m≥0.3** 明确为 R&F 的建议（除非大量培养物），不再写"任何估计器都不可靠"。
+- **rSalvador 引用页码**：7:3661 → **7:3849–3856**。
+- **RF2000 验收数据**：旧文件是 52 管截断版且把中位数法 1.11 当成 MSS；已替换为完整 60 管 Table 3，MSS=1.2274（原文 1.23）。
+- 同步更新 `docs/testing.md`、`examples/README.md`。
+
+## 0.7.0 — 2026-10-30
+
+### Breaking
+- 菌株卡字段中性化：`M_WT` → **`M_base`**，`mu_St` → **`mu_supply`**（旧名不再兼容，旧卡需手动改键）。
+- `fit-fc` 的 `--mu-wt` → `--mu-base`（旧名删除）。
+
+### Added
+- 两条独立保护上限：`P_mutator_max`（默认 0.05，`role: mutator`）与 `P_protected_max`（默认 0.10，`role: bgc/other`）；冲突时按上限截断窗口并报告实际 events、缺口与 binding 来源。
+- `protected[].role`：`mutator` / `bgc` / `other`。
+- `optimize --protocol` 可省略（用内置默认协议卡）；`--fill-defaults` 用默认假设值补菌株卡缺项（报告标 ★未测）。
+- 外推元数据：`mu_supply_source` / `selection_marker`；两者不同时自动提示按 `references/markers.md` 处理。
+- 新手护栏：`references/intake.md`（提问清单）、`references/guardrails.md`（盲区排查表）、`references/markers.md`（标记外推）。
+- `rate` 结束提示整管/多板；`compare` 结束提示 p 值解释。
+
+### Changed
+- 文档去项目化：示例菌株/协议改为通用占位；M7/gkab583 等只作"文献示例"标注。
+- `SKILL.md` 精简为路由 + 铁律 + 速查（细节移入 `references/`）。
+- 新增 `README.md`。
+
+### Migration
+旧卡把 `M_WT:` 改成 `M_base:`、`mu_St:` 改成 `mu_supply:`；命令 `--mu-wt` 改成 `--mu-base`。

@@ -1,0 +1,18 @@
+# strain_card —— NRRL30420 示例（数值为占位假设，status 标注出处；实测后逐项替换）
+strain: NRRL30420
+M_base:              {value: 0.004,  ci: [0.002, 0.008], status: literature, note: "MA-WGS 量级（Drake），待波动分析替换"}
+M_on_ref:          {value: 0.4,    ci: [0.2, 0.9],     status: assumed,    note: "≈M_base×100；待波动分析（M7-on 组）"}
+M_off:             {value: 0.012,  ci: [0.006, 0.03],  status: assumed,    note: "合格线 ≤3×M_base（docs/mutator-window.md §7）"}
+mu_supply:             {value: 2.0e-8, ci: [1.0e-8, 4.0e-8], status: assumed,  note: "★参数6：供给端标记的波动分析，选定浓度"}
+background_false:  {value: 1.0e-9, status: literature, note: "孢子直接涂选择板；≥1e-4 弃药（示例：S. viridosporus 教训）"}
+tau_on_h:          {value: 2.0,    ci: [1.0, 4.0],     status: assumed,    note: "诱导上升沿，报告基因辅证"}
+tau_off_h:         {value: 4.0,    ci: [2.0, 8.0],     status: assumed,    note: "★参数5：洗脱衰变尾，最关键待测"}
+F_doses:
+  - {dose_mM: 0.03, F: 10,  status: assumed}
+  - {dose_mM: 0.3,  F: 100, status: assumed, note: "参考剂量（CebR 天然系统 0.3 mM）"}
+  - {dose_mM: 3.0,  F: 400, status: assumed}
+ref_dose_mM: 0.3
+td_h_off: 2.0
+td_h_on: 2.5          # 表达负担：M7 表达拖慢生长
+Nt_saturation: 3.0e8  # CFU（检测培养基饱和当量）
+clone_dispersion_sigma_ln: 1.0   # gkab583：克隆间 Rif 频率差 15×

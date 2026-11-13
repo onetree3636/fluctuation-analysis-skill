@@ -1,0 +1,21 @@
+# protocol_card —— 双开关构型：严谨型诱导启动子（纤维二糖/CebR）+ 温敏型质粒
+# 关停 = 移除诱导剂（启动子关）＋ 升温（质粒不再复制，随分裂稀释出）
+# ⚠️ type 必须加引号（YAML 1.1 会把裸 off/on 解析成布尔）
+protocol: dual-switch
+phases:
+  - {name: 预培养（许可温度，无诱导）, type: "pre",   duration_h: 24, N0: 1.0e5, Nt: 1.0e8}
+  - {name: 诱导脉冲（许可温度+诱导剂）, type: "pulse", duration_h: 6,  dose_mM: 0.3, N0: 1.0e7}
+  - {name: 切换（去诱导+升温）,         type: "decay", duration_h: 2,  generations: 1, td_h: 3.5}
+  # 拷贝数 N 由用户提供（qPCR/测序/文献）；稀释到 <1 需 ceil(log2 N) 代（例 N=20 → 5 代）
+  - {name: 治愈（限制温度，质粒稀释）,   type: "off",   generations: 5,  plasmid_loss_per_gen: 0.5, td_h: 3.5}
+  - {name: 选择板菌落长出,             type: "off",   generations: 15, td_h: 3.5}
+  - {name: 传代/治愈孢子,              type: "off",   generations: 3,  td_h: 3.5}
+decision:
+  k_target_clones: 12
+  P_success_min: 0.95
+  T_pulse_range_h: [3, 24]
+  N0_min: 1.0e6
+  N0_max: 5.0e7
+  doses_available: [0.03, 0.3, 3.0]
+  mc_samples: 3000
+  seed: 0

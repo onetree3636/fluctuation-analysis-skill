@@ -1,0 +1,22 @@
+# protocol_card —— 瞬变脉冲协议示例（README §1 的相位表）
+# ⚠️ type 的取值必须加引号：YAML 1.1 会把裸 off/on 解析成布尔 False/True
+protocol: NRRL30420-pulse-v1
+phases:
+  - {name: 接合后恢复预培养, type: "pre",   duration_h: 24, N0: 1.0e5, Nt: 1.0e8}
+  - {name: 诱变脉冲,         type: "pulse", duration_h: 18, dose_mM: 0.3, N0: 1.0e7}
+  # 洗脱后这 2 h 仍可能有分裂：不给 generations 就按 duration_h/td_off 折算（这里 2/2.0 = 1 代）
+  # —— 尾部负荷正是参数 5（τ_off）要回答的问题；若确实洗后立即涂板、不再分裂，写 generations: 0
+  - {name: 洗脱与涂板操作,   type: "decay", duration_h: 2,  note: "按 td_off 折算代数"}
+  - {name: 选择板菌落长出,   type: "off",   generations: 15, note: "St 板上抗性克隆长出"}
+  - {name: 治愈孢子传代,     type: "off",   generations: 3,  note: "30 °C 无抗自丢失"}
+decision:
+  k_target_clones: 12        # 想要的独立 hit 数（进初筛的多样性）
+  P_success_min: 0.95
+  P_protected_max: 0.10      # BGC/其他保护区误伤上限（role: bgc/other）
+  P_mutator_max: 0.05        # mutator 自失活上限（role: mutator）
+  T_pulse_range_h: [3, 24]
+  N0_min: 1.0e6
+  N0_max: 5.0e7              # 高密度接种上限（操作可达）
+  doses_available: [0.03, 0.3, 3.0]
+  mc_samples: 3000
+  seed: 0
