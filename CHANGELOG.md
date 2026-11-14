@@ -117,7 +117,7 @@
   稀有突变前提失效，该表给出的数字会被误读。`t_wt`/`t_mut` 仍保留在 JSON 里，
   只是不再渲染。〔11-13 后注：该输出随 `--mode design` 移除而不复存在。〕
 - `mtblocks`（2026-11-12）：`accessible_fraction` → **`entry_fraction`**（明确为
-  "靶点里能当第一步的比例"，ncomms13002 的 colistin = 2/5 ≈ 0.4）；窗口求解改成解析式
+  "靶点里能当第一步的比例"，膜靶药文献例（ncomms13002）= 2/5 ≈ 0.4）；窗口求解改成解析式
   `N0 ≤ Nt − k/(μ·activity)`，不再需要数值搜索。
 - `SKILL.md` / `docs/multitarget-model.md` / `tutorial` / `glossary` / `extrapolation` /
   `references/multitarget-guardrails.md` 同步（2026-11-12）：**加速只报线性 ≈ F**；

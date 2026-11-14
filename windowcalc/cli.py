@@ -364,7 +364,7 @@ def _field_arg(s: str) -> str:
     return s
 
 _REQUIRED_DECISION = {
-    "k_target_clones": "目标独立克隆数 k",
+    "k_target_clones": "目标克隆数 k",
     "P_success_min": "成功率下限（如 0.95）",
     "T_pulse_range_h": "脉冲时长搜索区间 [lo, hi]（h）",
     "N0_min": "接种量下限（CFU）",
@@ -1107,7 +1107,7 @@ def _mt_render_window(res: dict, cap_bgc: float = 0.10) -> str:
              f"（= 标记位点平均 μ_perbp × {res['genome_mb']:g} Mb；"
              "当基因组平均用，前提各标记 λ̄≈1——未测，误差棒见 docs）")
     L.append("")
-    L.append(f"三、窗口（第一步；k={res['k']:g} 个独立克隆，Nt={res['nt']:.3g}）")
+    L.append(f"三、窗口（第一步；k={res['k']:g} 个克隆，Nt={res['nt']:.3g}）")
     r = res["row"]
     if not r["feasible"]:
         L.append(f"  ⛔ 给不出 k：N0 压到下限时最大 events = {r['events']:.3g}"
@@ -1136,6 +1136,8 @@ def _mt_render_window(res: dict, cap_bgc: float = 0.10) -> str:
              if r["feasible"] else "  - 累计乘客 = （各步脉冲代数之和）× M")
     L.append("  - 若显示「供给富余」，瓶颈是保护而不是供给：往上调 N0、缩短脉冲，"
              "而不是加强诱导")
+    L.append("  - k 是**克隆数**不是独立事件数：早发突变经分裂产生同谱系菌落"
+             "（jackpot 板上尤甚），独立事件数 ≤ k；要等号需 WGS 验证克隆间突变谱不同")
     return "\n".join(L)
 
 
@@ -1155,7 +1157,7 @@ def cmd_multitarget(args) -> int:
             "已吸收靶点个数×长度×有益比例\n"
             "  --nt         饱和密度 CFU（= 菌株卡 Nt_saturation）\n"
             "  --genome-mb  基因组大小 Mb（用于折算乘客负荷）\n"
-            "  --k          想拿到的独立克隆数\n\n"
+            "  --k          目标克隆数（克隆数 ≥ 独立事件数：同谱系菌落共享一个早发突变）\n\n"
             "**如果你是 agent**：请把这段原样呈现给用户并等待明确同意，"
             "不要自行编造这些值。")
     markers = _read_markers_csv(args.markers)
@@ -1365,7 +1367,7 @@ def build_parser() -> argparse.ArgumentParser:
                        help="供给主参数：实测 f_step（克隆数/CFU，在下一档浓度铺板测得）。"
                             "已吸收靶点个数×长度×有益比例")
     ap_mt.add_argument("--k", type=float, default=None,
-                       help="想拿到的独立耐药克隆数")
+                       help="目标克隆数（克隆数 ≥ 独立事件数：同谱系菌落共享一个早发突变）")
     ap_mt.add_argument("--nt", type=float, default=None,
                        help="饱和密度 CFU（= 菌株卡 Nt_saturation）")
     ap_mt.add_argument("--genome-mb", type=float, default=None,
