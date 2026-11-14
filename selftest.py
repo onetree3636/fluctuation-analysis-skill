@@ -311,7 +311,7 @@ def _():
     # ★ 与 build_parser() 的子命令保持同步（2026-11-13 补 multitarget——v0.8.0 漏更，
     #   任何含 "windowcalc multitarget" 的文档都会被误报为未知子命令）
     known = {"rate", "compare", "power", "optimize", "fit-fc", "fit-tauoff",
-             "fit-induction", "design-induction", "multitarget", "fstep"}
+             "fit-induction", "design-induction", "multitarget", "fstep", "ramp"}
     docs = [ROOT / "SKILL.md"] + sorted((ROOT / "docs").glob("*.md"))
     bad = []
     for d in docs:

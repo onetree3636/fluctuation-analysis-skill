@@ -20,6 +20,7 @@
 | `optimize` | 表达窗口三旋钮优化：min 乘客负荷 s.t. P(≥k 克隆) ≥ 0.95 |
 | `multitarget` | 多靶点/膜活性药物的窗口——供给只认铺板实测 `--f-step` |
 | `fstep` | 铺板记录 → 背景扣除后的 f_step 值（Wilson CI / rule of three） |
+| `ramp` | 渐升梯级规划器：PAP 尾部拟合（δ）→ 每档 f_step 预测 → 累计乘客/失守账 |
 
 ## 快速开始
 

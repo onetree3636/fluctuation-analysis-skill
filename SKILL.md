@@ -63,7 +63,7 @@ allowed-tools: Bash Read Write Edit Glob Grep
 | 用一种标记测速、想外推到另一种 | 先读 `references/markers.md`，走 4 问检查清单；**不得直接把 μ_X 填成 μ_supply** | 该文档 |
 | **多靶点/膜活性药：窗口怎么定、乘客多少** | 按 `references/multitarget-intake.md` 问齐三样实测值（**f_step / 标定标记 / k·G·Nt**）→ `multitarget --f-step …`；先过 `references/multitarget-guardrails.md` | `docs/multitarget-tutorial.md` |
 
-## 10 个子命令（速查）
+## 11 个子命令（速查）
 
 | 子命令 | 用途 | 关键旗标 |
 |---|---|---|
@@ -76,7 +76,8 @@ allowed-tools: Bash Read Write Edit Glob Grep
 | fit-fc | 剂量响应 | `--mu-base` |
 | fit-tauoff | 衰变 | `--mu-off`、`--td` |
 | multitarget | 多靶点窗口：f_step 实测供给 + 乘客标定链（M = μ_perbp × G） | `--f-step --markers --k --nt --genome-mb [--bgc-kb]`；缺参**不跑**、不得编造 |
-| fstep | f_step 铺板记录 → 可粘贴的供给值（含 Wilson/Newcombe 区间、背景红灯） | `--input`（step,when,cfu_plated,clones） |
+| fstep | f_step 铺板记录 → 可粘贴的供给值（含 Wilson/Newcombe 区间、背景红灯） |
+| ramp | 渐升梯级规划器：PAP 尾部拟合（δ）→ 每档 f_step 预测 → 累计乘客/失守账 | `--pap`（c,clones,cfu）+ `--markers` + `--n-win`/`--capacity` | `--input`（step,when,cfu_plated,clones） |
 
 **rate 输入**：每行一管 `r[,Nt[,volume_mL]]`；可读 `.csv/.txt/.xlsx`（第一个工作表）；
 表头可留；第 1 列 r、第 2 列 Nt；Nt 是 **CFU/管**（CFU/mL 用 `--nt-unit per_mL --volume-mL`）。
@@ -130,4 +131,4 @@ allowed-tools: Bash Read Write Edit Glob Grep
 - `docs/resistance-evidence-tiers.md`：S/C/U 的证据从哪来（D1 单步筛选 → D2 传代 → D3 测序）。
 - `references/multitarget-intake.md`：**给 agent 的 L2 接入**——从一句话判断 mode、三问定参、缺参不得自行同意。
 - `references/multitarget-guardrails.md`：多靶点必问清单（3 条必问、5 个高频误解、3 个静默改结论的输入）。
-- 维护者自检 **23 项：环境**、入口自举、规范校验、**10 个子命令**、Excel、已知答案、端到端报告、文档一致性、错误路径、断链、多靶点缺参拦截。
+- 维护者自检 **23 项：环境**、入口自举、规范校验、**11 个子命令**、Excel、已知答案、端到端报告、文档一致性、错误路径、断链、多靶点缺参拦截。
