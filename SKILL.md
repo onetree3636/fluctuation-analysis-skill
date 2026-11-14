@@ -124,6 +124,7 @@ allowed-tools: Bash Read Write Edit Glob Grep
 - `docs/experiment-design.md`、`docs/mutator-window.md`、`docs/knowledge-base.md`、`docs/tutorial.md`、`docs/glossary.md`。
 - `docs/viable-count-problems.md`：活菌计数不准（随机误差/低回收/团块/VBNC/超范围）的诊断与校正/替代计数。
 - `docs/protocol-fstep.md`：**f_step 铺板规程**（配对设计、板量倒推、Wilson CI、背景扣除——多靶点主路径的实验侧，按文献/推导/约定三级标注）。
+- `docs/protocol-ramp.md`：**渐升（ramp）规划与预测规程**——文献两大流派对照、birth-death-mutation 模型的预测边界（pcbi.1014666 精读）、`ramp` 规划器的数学（PAP 拟合/平稳补充/三段账/失守严格式）、记录字段表
 - `docs/start-here.md`：**多靶点入门（5 分钟，零公式）**——三个是非题决定下一步。
 - `docs/multitarget-tutorial.md`：**10 分钟上手**——从“我快 78 倍”到排布表与结论。
 - `docs/multitarget-model.md`：进阶数学（供给饱和、三种标度律、α 的斜率法、局限）。
