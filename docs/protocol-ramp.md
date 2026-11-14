@@ -246,19 +246,25 @@ P_失守 = 1 − Πᵢ exp(−Pᵢ × ℓ) = 1 − exp(−E[P_总] × ℓ)，   
 
 ---
 
-## 7. 与 `ramp` 子命令的对应
+## 7. 与 `multitarget` 命令的对应
+
+`fstep`/`ramp` 两个子命令已并入 `multitarget`（账本解释器，2026-11-14）——
+**records 账本是唯一状态文件**，命令读取全部历史记录，输出四段：各档 f_step →
+PAP 现状（平稳性审计）→ 下一窗设计 → 剩余梯级与累计账。
 
 ```
-python3 run.py ramp --pap pap.csv --markers markers.csv --genome-mb 7.5 \
-    --n-win 4 --n-plate 27 --m-off 8.7e-3 --n-post 4 \
-    --k 30 --capacity 6e7 --c-start 1 --c-target 5 --bgc-kb 83
+python3 run.py multitarget --records records.csv --markers markers.csv \
+    --genome-mb 7.5 --n-win 4 --n-plate 27 --m-off 8.7e-3 --n-post 4 \
+    --k 30 --capacity 6e7 --c-target 5 --bgc-kb 83
 ```
 
-- `--pap`：§3.1 的 PAP 点（c,克隆数,CFU；零克隆行自动作上界）；
+- `--records`：§5 的记录字段表（cycle, c, when=pre/post, cfu, clones）；
+  每档多涂的浓度板就是 §3.1 的 PAP 点——零克隆行自动作上界；
 - `--n-win`：§3.4 的 n_win（P0 实测 td 与 Nt_sat 钉死后填有效代数）；
 - `--n-plate`：§3.4 的板内扩张代数（= log₂(克隆细胞数)，实测填入）；
 - `--m-off`：§3.4 的 M_off（不给则窗口外段不计入并注明）；
-- `--margin`：§3.3 的可行性安全倍数（默认 3.0）。
+- `--margin`：§3.3 的可行性安全倍数（默认 3.0）；
+- 每档执行完把新记录**追加**进 records.csv 重跑——上一份报告的预测与本档实测
+  的对照就是平稳补充假设的审计（偏出 CI → 曲线重拟合/拆档）。
 
-输出四段：PAP 拟合 → 梯级表（每档 f_step ±CI / 需铺 CFU / 乘客 / 累计 / 失守）
-→ 累计账 → 怎读护栏（外推警告、门控提示、m-off 缺失注明）。
+旧 `fstep` / `ramp --pap` 的单档口径分别由输出①与②④覆盖，功能无丢失。

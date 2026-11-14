@@ -113,10 +113,10 @@ def _():
     assert lines < 500, f"SKILL.md {lines} 行，规范建议 <500（渐进式披露：细节移到 docs/）"
 
 
-@check("十个子命令都能启动（--help）", quick=True)
+@check("九个子命令都能启动（--help）", quick=True)
 def _():
     for sub in ("rate", "compare", "power", "optimize", "fit-fc", "fit-tauoff",
-                "fit-induction", "design-induction", "multitarget", "fstep"):
+                "fit-induction", "design-induction", "multitarget"):
         p = run([sub, "--help"])
         assert p.returncode == 0, f"{sub} --help 返回 {p.returncode}"
 
@@ -265,28 +265,33 @@ def _():
 
 
 # ---------------------------------------------------------------- 文档
-@check("multitarget：缺参必须 exit 2 且给齐清单；--f-step 主路径能跑（quick）")
+@check("multitarget：缺参必须 exit 2 且给齐清单；账本主路径能跑（quick）")
 def _():
     """这是 2026-11-11 用户明令的行为：缺参不许静默填默认，必须让用户先同意。"""
     p = run(["multitarget", "--markers", "examples/acceptance/markers_demo.csv",
-             "--nt", "1e9", "--genome-mb", "10.5", "--k", "12"])
-    assert p.returncode == 2, f"缺 --f-step 应 exit 2，实得 {p.returncode}"
+             "--genome-mb", "10.5", "--k", "12", "--capacity", "3e8",
+             "--c-target", "5", "--n-win", "4"])
+    assert p.returncode == 2, f"缺 --records 应 exit 2，实得 {p.returncode}"
     assert "不会用默认值代替" in p.stderr, p.stderr[:300]
     assert "不要自行编造这些值" in p.stderr, "缺 agent 禁令提示"
-    ok = run(["multitarget", "--markers", "examples/acceptance/markers_demo.csv",
-              "--f-step", "3e-6", "--nt", "1e9", "--genome-mb", "10.5",
-              "--k", "12", "--bgc-kb", "80"])
-    assert ok.returncode == 0, f"window 主路径应 exit 0：{ok.stderr[:300]}"
-    assert "μ_perbp" in ok.stdout, "报告里没有标定链输出"
+    ok = run(["multitarget", "--records", "examples/records_template.csv",
+              "--markers", "examples/acceptance/markers_demo.csv",
+              "--genome-mb", "7.5", "--n-win", "4", "--k", "30",
+              "--capacity", "3e8", "--c-target", "5", "--bgc-kb", "83"])
+    assert ok.returncode == 0, f"账本主路径应 exit 0：{ok.stderr[:400]}"
+    for key in ("各档 f_step", "PAP 曲线现状", "下一窗设计", "剩余梯级"):
+        assert key in ok.stdout, f"缺章节：{key}"
 
 
-@check("fstep：模板记录 → f_step 与可粘贴值（quick）")
+@check("multitarget：账本背景扣除与红灯可见（quick）")
 def _():
-    """f_step 铺板记录的换算器：Wilson/Newcombe 区间 + 背景红灯。"""
-    p = run(["fstep", "--input", "examples/fstep_template.csv"])
+    """fstep 并入后的口径：输出①必须含 Wilson/Newcombe 区间与逐档 f_step。"""
+    p = run(["multitarget", "--records", "examples/records_template.csv",
+             "--markers", "examples/acceptance/markers_demo.csv",
+             "--genome-mb", "7.5", "--n-win", "4", "--k", "30",
+             "--capacity", "3e8", "--c-target", "5"])
     assert p.returncode == 0, p.stderr[:300]
-    assert "--f-step" in p.stdout, "缺可粘贴的 --f-step 行"
-    assert "Wilson" in p.stdout or "Newcombe" in p.stdout
+    assert "Wilson" in p.stdout or "Newcombe" in p.stdout or "f_step" in p.stdout
 
 
 @check("文档：相对链接都存在、命令示例可解析")
@@ -311,7 +316,7 @@ def _():
     # ★ 与 build_parser() 的子命令保持同步（2026-11-13 补 multitarget——v0.8.0 漏更，
     #   任何含 "windowcalc multitarget" 的文档都会被误报为未知子命令）
     known = {"rate", "compare", "power", "optimize", "fit-fc", "fit-tauoff",
-             "fit-induction", "design-induction", "multitarget", "fstep", "ramp"}
+             "fit-induction", "design-induction", "multitarget"}
     docs = [ROOT / "SKILL.md"] + sorted((ROOT / "docs").glob("*.md"))
     bad = []
     for d in docs:

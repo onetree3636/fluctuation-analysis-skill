@@ -224,26 +224,16 @@ f_step(校正) = f_post − f_pre
 
 ## 6. 记录模板与命令
 
-```
-examples/fstep_template.csv：
-step,plate,when,cfu_plated,clones
-1,1,pre,3.0e8,0
-1,2,post,3.0e8,12
-...
-```
+记录统一写进**账本**（`examples/records_template.csv`，schema：
+`cycle,c,when,cfu,clones`；when=pre/post；同 (cycle,c) 多板自动合并），
+由 `multitarget` 读取并输出背景扣除后的 f_step（含 Wilson/Newcombe 区间与红灯）：
 
 ```
-# 换算（背景扣除 + Wilson/Newcombe 区间 + 背景红灯）：
-python -m windowcalc fstep --input examples/fstep_template.csv
-
-# 取输出的 --f-step 值直接粘贴：
-python -m windowcalc multitarget \
-  --markers  examples/acceptance/markers_demo.csv \
-  --f-step   4e-08 \
-  --k 12 --nt 1e9 --genome-mb 10.5 --bgc-kb 80
+python3 run.py multitarget --records records.csv --markers markers.csv \
+    --genome-mb 7.5 --n-win 4 --k 30 --capacity 6e7 --c-target 5
 ```
 
----
+（2026-11-14 起 `fstep` 子命令已并入 `multitarget`，单档口径由输出①覆盖。）
 
 ## 7. 引用
 

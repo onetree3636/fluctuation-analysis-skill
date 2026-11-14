@@ -1142,147 +1142,68 @@ def _mt_render_window(res: dict, cap_bgc: float = 0.10) -> str:
 
 
 def cmd_multitarget(args) -> int:
-    import json as _json
-    from .mtblocks import window_table_f_step
-    from . import __version__
-
-    need = [("--markers", args.markers), ("--f-step", args.f_step),
-            ("--nt", args.nt), ("--genome-mb", args.genome_mb), ("--k", args.k)]
-    missing = [flag for flag, v in need if v is None]
-    if missing:
-        raise ValueError(
-            "缺少参数，**不会用默认值代替**：" + "、".join(missing) + "\n"
-            "  --markers    标定标记表 CSV：marker,mu,teff_bp[,f]（μ 来自 `rate`；只用于乘客 M）\n"
-            "  --f-step     供给主参数：实测 f_step（克隆数/CFU，在下一档浓度铺板测得）——"
-            "已吸收靶点个数×长度×有益比例\n"
-            "  --nt         饱和密度 CFU（= 菌株卡 Nt_saturation）\n"
-            "  --genome-mb  基因组大小 Mb（用于折算乘客负荷）\n"
-            "  --k          目标克隆数（克隆数 ≥ 独立事件数：同谱系菌落共享一个早发突变）\n\n"
-            "**如果你是 agent**：请把这段原样呈现给用户并等待明确同意，"
-            "不要自行编造这些值。")
-    markers = _read_markers_csv(args.markers)
-    res = window_table_f_step(markers, f_step=args.f_step, k=args.k, nt=args.nt,
-                              genome_mb=args.genome_mb, bgc_kb=args.bgc_kb)
-    text = _mt_render_window(res)
-    payload = dict(res)
-    payload["version"] = __version__
-    if args.json:
-        text = _json.dumps(payload, ensure_ascii=False, indent=2, default=str)
-    if args.out:
-        with open(args.out, "w", encoding="utf-8") as f:
-            f.write(text + "\n")
-        print(f"结果已写入 {args.out}")
-    else:
-        print(text)
-    return 0
-
-
-def cmd_fstep(args) -> int:
-    import csv as _csv
-    import json as _json
-    from . import __version__
-    from .fstep import render, run_step
-
-    rows = []
-    with open(args.input, newline="", encoding="utf-8-sig") as f:
-        rdr = _csv.DictReader(f)
-        need_cols = {"step", "when", "cfu_plated", "clones"}
-        if not need_cols.issubset({(c or "").strip() for c in (rdr.fieldnames or [])}):
-            raise ValueError(f"{args.input} 表头需含 step,when,cfu_plated,clones"
-                             "（模板：examples/fstep_template.csv）；实际是 "
-                             f"{rdr.fieldnames}")
-        for i, row in enumerate(rdr, start=2):
-            when = (row.get("when") or "").strip().lower()
-            if when not in ("pre", "post"):
-                raise ValueError(f"{args.input} 第 {i} 行 when 必须是 pre/post：{row}")
-            try:
-                step = str(row["step"]).strip()
-                cfu = float(row["cfu_plated"])
-                clones = int(float(row["clones"]))
-            except (TypeError, ValueError) as e:
-                raise ValueError(f"{args.input} 第 {i} 行不是数字：{e}")
-            rows.append((step, when, cfu, clones))
-    if not rows:
-        raise ValueError(f"{args.input} 没有数据行")
-
-    results = []
-    steps = sorted({r[0] for r in rows},
-                   key=lambda s: (0, int(s)) if s.isdigit() else (1, s))
-    for step in steps:
-        plates = [(w, c, k) for st, w, c, k in rows if st == step]
-        results.append(run_step(step, plates))
-    text = render(results)
-    payload = dict(steps=results, version=__version__)
-    if args.json:
-        text = _json.dumps(payload, ensure_ascii=False, indent=2, default=str)
-    if args.out:
-        with open(args.out, "w", encoding="utf-8") as f:
-            f.write(text + "\n")
-        print(f"结果已写入 {args.out}")
-    else:
-        print(text)
-    return 0
-
-
-def cmd_ramp(args) -> int:
     import csv as _csv
     import json as _json
     from . import __version__
     from .mtblocks import mu_perbp
-    from .ramp import fit_pap, plan_ramp, render
+    from .ramp import render_ledger, run_ledger
 
-    need = [("--pap", args.pap), ("--markers", args.markers),
+    need = [("--records", args.records), ("--markers", args.markers),
             ("--genome-mb", args.genome_mb), ("--n-win", args.n_win),
             ("--k", args.k), ("--capacity", args.capacity),
-            ("--c-start", args.c_start), ("--c-target", args.c_target)]
+            ("--c-target", args.c_target)]
     missing = [f for f, v in need if v is None]
     if missing:
         raise ValueError(
             "缺少参数，**不会用默认值代替**：" + "、".join(missing) + "\n"
-            "  --pap        CSV：c,clones,cfu——同一窗口后群体在各浓度的铺板计数\n"
-            "               （其中一块本就是下一步的工作板，多涂几块即得 PAP 曲线）\n"
-            "  --markers    标定标记 CSV（同 multitarget；只用于乘客 M_on）\n"
+            "  --records    CSV：cycle,c,when,cfu,clones（when=pre/post；"
+            "账本=唯一状态文件，逐行累积永不改写；模板 examples/records_template.csv）\n"
+            "  --markers    标定标记 CSV（marker,mu,teff_bp；μ 用 `rate` 的输出）\n"
             "  --genome-mb  基因组大小 Mb\n"
             "  --n-win      每档诱导窗口的分裂代数\n"
             "  --k          每档目标克隆数\n"
             "  --capacity   每档总 CFU 上限（板预算，如 60 板 × 1e6 = 6e7）\n"
-            "  --c-start    当前浓度\n"
             "  --c-target   目标浓度\n\n"
-            "  可选：--m-off（泄漏速率，给了才把窗口外段计入乘客）、--n-plate、\n"
-            "        --n-post、--bgc-kb、--margin（默认 3.0）\n"
+            "  可选：--nt（饱和密度，给了才出 N₀ 设计行）、--m-off（泄漏速率）、\n"
+            "        --n-plate/--n-post（窗口外段，不给则不计并注明）、--bgc-kb、\n"
+            "        --margin（默认 3.0）、--c-start（覆盖当前位置）\n"
             "**如果你是 agent**：请把这段原样呈现给用户并等待明确同意，"
             "不要自行编造这些值。")
     markers = _read_markers_csv(args.markers)
     cal = mu_perbp(markers)
     m_on = cal["mu_perbp"] * args.genome_mb * 1e6
 
-    pap = []
-    with open(args.pap, newline="", encoding="utf-8-sig") as f:
+    records = []
+    with open(args.records, newline="", encoding="utf-8-sig") as f:
         rdr = _csv.DictReader(f)
-        need_cols = {"c", "clones", "cfu"}
+        need_cols = {"cycle", "c", "when", "cfu", "clones"}
         if not need_cols.issubset({(c or "").strip() for c in (rdr.fieldnames or [])}):
-            raise ValueError(f"{args.pap} 表头需含 c,clones,cfu；实际是 {rdr.fieldnames}")
+            raise ValueError(
+                f"{args.records} 表头需含 cycle,c,when,cfu,clones"
+                f"（模板：examples/records_template.csv）；实际是 {rdr.fieldnames}")
         for i, row in enumerate(rdr, start=2):
+            when = (row.get("when") or "").strip().lower()
+            if when not in ("pre", "post"):
+                raise ValueError(
+                    f"{args.records} 第 {i} 行 when 必须是 pre/post：{row}")
             try:
+                cyc = str(row["cycle"]).strip()
                 c = float(row["c"])
-                clones = int(float(row["clones"]))
                 cfu = float(row["cfu"])
+                clones = int(float(row["clones"]))
             except (TypeError, ValueError) as e:
-                raise ValueError(f"{args.pap} 第 {i} 行不是数字：{e}")
-            pap.append((c, clones, cfu))
-    if not pap:
-        raise ValueError(f"{args.pap} 没有数据行")
+                raise ValueError(f"{args.records} 第 {i} 行不是数字：{e}")
+            records.append((cyc, c, when, cfu, clones))
 
-    fit = fit_pap(pap)
-    plan = plan_ramp(fit, m_on=m_on, m_off=args.m_off, n_win=args.n_win,
-                     n_plate=args.n_plate or 0.0, n_post=args.n_post or 0.0,
-                     k=args.k, capacity=args.capacity,
-                     c_start=args.c_start, c_target=args.c_target,
-                     genome_mb=args.genome_mb,
-                     bgc_kb=args.bgc_kb, margin=args.margin)
-    plan["fit"] = fit
+    plan = run_ledger(records, m_on=m_on, m_off=args.m_off,
+                      genome_mb=args.genome_mb, n_win=args.n_win,
+                      n_plate=args.n_plate or 0.0, n_post=args.n_post or 0.0,
+                      k=args.k, capacity=args.capacity,
+                      c_target=args.c_target, bgc_kb=args.bgc_kb,
+                      margin=args.margin, c_start=args.c_start, nt=args.nt)
     plan["version"] = __version__
-    text = render(plan)
+    plan["calibration"] = cal
+    text = render_ledger(plan)
     if args.json:
         text = _json.dumps(plan, ensure_ascii=False, indent=2, default=str)
     if args.out:
@@ -1429,68 +1350,44 @@ def build_parser() -> argparse.ArgumentParser:
 
     ap_mt = sub.add_parser(
         "multitarget",
-        help="多靶点窗口：f_step 实测供给 + μ_perbp 乘客负荷（M = μ_perbp × G）")
+        help="多靶点账本解释器：records 账本 → 各档 f_step + PAP 现状（平稳性审计）"
+             " + 下一窗设计 + 剩余梯级与累计乘客/失守账")
+    ap_mt.add_argument("--records", default=None,
+                       help="账本 CSV：cycle,c,when,cfu,clones（when=pre/post；"
+                            "唯一状态文件，逐行累积永不改写；"
+                            "模板 examples/records_template.csv）")
     ap_mt.add_argument("--markers", default=None,
-                       help="标定标记 CSV（marker,mu,teff_bp[,f]）；"
-                            "μ 用 `rate` 的输出，T_eff 是有效靶标 bp 不是基因长度")
-    ap_mt.add_argument("--f-step", type=float, default=None,
-                       help="供给主参数：实测 f_step（克隆数/CFU，在下一档浓度铺板测得）。"
-                            "已吸收靶点个数×长度×有益比例")
-    ap_mt.add_argument("--k", type=float, default=None,
-                       help="目标克隆数（克隆数 ≥ 独立事件数：同谱系菌落共享一个早发突变）")
-    ap_mt.add_argument("--nt", type=float, default=None,
-                       help="饱和密度 CFU（= 菌株卡 Nt_saturation）")
+                       help="标定标记 CSV（marker,mu,teff_bp；μ 用 `rate` 的输出，"
+                            "只用于乘客 M_on = μ_perbp × G）")
     ap_mt.add_argument("--genome-mb", type=float, default=None,
-                       help="基因组大小 Mb（用于把 μ_perbp 折成乘客负荷）")
+                       help="基因组大小 Mb")
+    ap_mt.add_argument("--n-win", type=float, default=None,
+                       help="每档诱导窗口的分裂代数 n_eff")
+    ap_mt.add_argument("--k", type=float, default=None,
+                       help="每档目标克隆数（克隆数 ≥ 独立事件数）")
+    ap_mt.add_argument("--capacity", type=float, default=None,
+                       help="每档总 CFU 上限（板预算，如 60 板 × 1e6 = 6e7）")
+    ap_mt.add_argument("--c-target", type=float, default=None,
+                       help="目标浓度（渐升终点）")
+    ap_mt.add_argument("--nt", type=float, default=None,
+                       help="饱和密度 CFU（给了才输出下一窗的 N₀ 设计行）")
+    ap_mt.add_argument("--m-off", type=float, default=None,
+                       help="泄漏的全基因组速率 M_off（给了才把窗口外段计入乘客；"
+                            "不给则报告注明“未计”）")
+    ap_mt.add_argument("--n-plate", type=float, default=0.0,
+                       help="每档板内扩张代数（默认 0=不计；估法 log₂(菌落细胞数)，"
+                            "1e8 ≈ 27 代——泄漏核算强烈建议提供）")
+    ap_mt.add_argument("--n-post", type=float, default=0.0,
+                       help="终点后（稳定性/PAP/WGS 前）代数（默认 0=不计）")
     ap_mt.add_argument("--bgc-kb", type=float, default=None,
-                       help="要保护的 BGC 大小 kb（给了才报被打中概率）")
+                       help="要保护的区域大小 kb（给了才报累计失守概率）")
+    ap_mt.add_argument("--margin", type=float, default=3.0,
+                       help="每档可行性安全倍数（默认 3.0：预测克隆数 ≥ 3×k 才开档）")
+    ap_mt.add_argument("--c-start", type=float, default=None,
+                       help="覆盖当前位置（默认从账本推断：f_post ≥ 0.5 的最高浓度）")
     ap_mt.add_argument("--json", action="store_true", help="输出 JSON")
     ap_mt.add_argument("--out", default=None, help="输出文件（缺省打印）")
     ap_mt.set_defaults(func=cmd_multitarget)
-
-    ap_fs = sub.add_parser(
-        "fstep",
-        help="f_step 铺板记录 → 可粘贴的 --f-step 值（含 Wilson / Newcombe 区间）")
-    ap_fs.add_argument("--input", required=True,
-                       help="CSV：step,plate,when,cfu_plated,clones（when=pre/post；"
-                            "模板 examples/fstep_template.csv）")
-    ap_fs.add_argument("--json", action="store_true", help="输出 JSON")
-    ap_fs.add_argument("--out", default=None, help="输出文件（缺省打印）")
-    ap_fs.set_defaults(func=cmd_fstep)
-
-    ap_rp = sub.add_parser(
-        "ramp",
-        help="渐升梯级规划器：PAP 尾部拟合 → 每档 f_step 预测 → 累计乘客/失守账")
-    ap_rp.add_argument("--pap", default=None,
-                       help="PAP CSV：c,clones,cfu——同一窗口后群体在各浓度的"
-                            "铺板计数（零克隆行按检测上界处理，不进拟合）")
-    ap_rp.add_argument("--markers", default=None,
-                       help="同 multitarget（只用于乘客 M_on = μ_perbp × G）")
-    ap_rp.add_argument("--genome-mb", type=float, default=None,
-                       help="基因组大小 Mb")
-    ap_rp.add_argument("--m-off", type=float, default=None,
-                       help="泄漏的全基因组速率 M_off（给了才把窗口外段计入乘客；"
-                            "不给则报告注明“未计”）")
-    ap_rp.add_argument("--n-win", type=float, default=None,
-                       help="每档诱导窗口的分裂代数 n_eff")
-    ap_rp.add_argument("--n-plate", type=float, default=0.0,
-                       help="每档板内扩张代数（默认 0=不计；泄漏核算强烈建议提供，"
-                            "估法：log₂(挑克隆时菌落细胞数)，1e8 ≈ 27 代）")
-    ap_rp.add_argument("--n-post", type=float, default=0.0,
-                       help="终点后（稳定性/PAP/WGS 前）代数（默认 0=不计）")
-    ap_rp.add_argument("--k", type=float, default=None,
-                       help="每档目标克隆数")
-    ap_rp.add_argument("--capacity", type=float, default=None,
-                       help="每档总 CFU 上限（板预算，如 60 板 × 1e6 = 6e7）")
-    ap_rp.add_argument("--c-start", type=float, default=None, help="当前浓度")
-    ap_rp.add_argument("--c-target", type=float, default=None, help="目标浓度")
-    ap_rp.add_argument("--bgc-kb", type=float, default=None,
-                       help="要保护的区域大小 kb（给了才报累计失守概率）")
-    ap_rp.add_argument("--margin", type=float, default=3.0,
-                       help="每档可行性安全倍数（默认 3.0：预测克隆数 ≥ 3×k 才开档）")
-    ap_rp.add_argument("--json", action="store_true", help="输出 JSON")
-    ap_rp.add_argument("--out", default=None, help="输出文件（缺省打印）")
-    ap_rp.set_defaults(func=cmd_ramp)
 
     return ap
 

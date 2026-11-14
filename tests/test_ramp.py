@@ -151,28 +151,33 @@ def test_render_contains_sections_and_numbers():
 
 
 def test_cli_smoke(tmp_path, capsys):
-    pap = tmp_path / "pap.csv"
-    pap.write_text("c,clones,cfu\n1,300,3e8\n2,30,3e8\n3,3,3e8\n", encoding="utf-8")
+    pap = tmp_path / "records.csv"
+    pap.write_text("cycle,c,when,cfu,clones\n"
+                   "1,2,pre,3.0e8,0\n1,2,post,3.0e8,300\n1,3,post,3.0e8,30\n"
+                   "1,4,post,3.0e8,3\n2,3,pre,3.0e8,1\n2,3,post,3.0e8,40\n"
+                   "2,4,post,3.0e8,8\n2,5,post,3.0e8,0\n", encoding="utf-8")
     mk = tmp_path / "mk.csv"
     mk.write_text("marker,mu,teff_bp\nrpoB,1.51e-7,7\n", encoding="utf-8")
-    from windowcalc.cli import cmd_ramp
+    from windowcalc.cli import cmd_multitarget
     args = argparse.Namespace(
-        pap=str(pap), markers=str(mk), genome_mb=7.5, m_off=8.7e-3,
-        n_win=4.0, n_plate=27.0, n_post=4.0, k=30.0, capacity=6e8,
-        c_start=1.0, c_target=5.0, bgc_kb=83.0, margin=1.0,
+        records=str(pap), markers=str(mk), genome_mb=7.5, m_off=8.7e-3,
+        n_win=4.0, n_plate=27.0, n_post=4.0, k=30.0, capacity=3e8,
+        c_target=5.0, bgc_kb=83.0, margin=3.0, c_start=None, nt=None,
         json=False, out=None)
-    assert cmd_ramp(args) == 0
+    assert cmd_multitarget(args) == 0
     out = capsys.readouterr().out
-    assert "梯级规划" in out and "累计账" in out
+    for key in ("各档 f_step", "PAP 曲线现状", "下一窗设计", "剩余梯级", "累计"):
+        assert key in out, f"缺章节：{key}"
 
 
-def test_cli_refusal_lists_missing(tmp_path, capsys):
+def test_cli_refusal_lists_missing(tmp_path):
     mk = tmp_path / "mk.csv"
     mk.write_text("marker,mu,teff_bp\nrpoB,1.51e-7,7\n", encoding="utf-8")
-    from windowcalc.cli import cmd_ramp
-    args = argparse.Namespace(pap=None, markers=str(mk), genome_mb=None,
+    from windowcalc.cli import cmd_multitarget
+    args = argparse.Namespace(records=None, markers=str(mk), genome_mb=None,
                               m_off=None, n_win=None, n_plate=0.0, n_post=0.0,
-                              k=None, capacity=None, c_start=None, c_target=None,
-                              bgc_kb=None, margin=3.0, json=False, out=None)
+                              k=None, capacity=None, c_target=None,
+                              bgc_kb=None, margin=3.0, c_start=None, nt=None,
+                              json=False, out=None)
     with pytest.raises(ValueError, match="不会用默认值代替"):
-        cmd_ramp(args)
+        cmd_multitarget(args)

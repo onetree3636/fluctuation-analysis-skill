@@ -1,11 +1,10 @@
 """fstep：铺板记录 → 可粘贴的升档供给频率 f_step（含 Wilson / Newcombe 区间）。
 
-输入 CSV（examples/fstep_template.csv）：
-    step,plate,when,cfu_plated,clones
-    1,1,pre,3.0e8,0
-    1,2,post,3.0e8,12
-when ∈ {pre, post}：pre = 脉冲**前**铺的下一档浓度板（背景）；
-                    post = 脉冲**后**铺的下一档浓度板（升档频率）。
+输入：每 (cycle, c) 的 pre/post 板计数（multitarget --records 的账本行，
+schema 见 examples/records_template.csv：cycle,c,when,cfu,clones）。
+when ∈ {pre, post}：pre = 该窗**前**铺的该浓度板（背景）；
+                    post = 该窗**后**铺的该浓度板（升档频率）。
+（2026-11-14 起 fstep 子命令并入 multitarget，本模块作为其逐档引擎保留。）
 
 方法（文献）：
   - 单比例 95%CI：Wilson（Wilson 1927, JASA 22:209；小样本下优于正态近似：

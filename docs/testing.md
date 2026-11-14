@@ -11,7 +11,7 @@ python selftest.py            # 23 项，约 40–100 s
 python selftest.py --quick    # 只查环境与命令（约 2 s）
 ```
 
-自检覆盖：环境 → **入口自举（`run.py --doctor`）** → **Agent Skills 规范** → 11 个子命令 → **Excel 与 CSV 结果一致** → 4 组**已知答案**（R&F 2000 文献值、部分涂板、LRT/θ、样本量）
+自检覆盖：环境 → **入口自举（`run.py --doctor`）** → **Agent Skills 规范** → 9 个子命令 → **Excel 与 CSV 结果一致** → 4 组**已知答案**（R&F 2000 文献值、部分涂板、LRT/θ、样本量）
 → 端到端（optimize 报告章节、fit 参数回收）→ 错误路径（坏数据/YAML 都不甩 traceback）→
 文档（断链、命令是否存在、四个用途入口、**文档里的数字与代码是否一致**）。
 
