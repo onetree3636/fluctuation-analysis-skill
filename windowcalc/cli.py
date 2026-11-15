@@ -1099,6 +1099,20 @@ def cmd_multitarget(args) -> int:
             ("--c-target", args.c_target)]
     missing = [f for f, v in need if v is None]
     if missing:
+        stage = ""
+        if "--records" in missing:
+            stage = (
+                "\n【阶段诊断】你还没有账本——多靶点要按顺序走，先补齐前两步：\n"
+                "  S0 母株基线（若还没做）：\n"
+                "     ① 测母株 MIC（肉汤稀释，标准流程）—— 决定起点 c_start\n"
+                "     ② 基线梯度（1/2/4/8/16× MIC 共 3–5 点），每点 ≥3×10⁸ CFU —— 同时得到 f_pre(c) 背景\n"
+                "  S1 第一档（有 MIC 之后）：\n"
+                "     ③ 定 c₁ = c_start × min(2.0, 目标倍数^(1/j))（j 未知就先用 1.5–2×）\n"
+                "     ④ 定首窗：N₀ ≤ Nt − k/f_guess → n_win = log₂(Nt/N₀)（f_guess 用保守先验，宁可偏短）\n"
+                "     ⑤ 首档铺板：c₁ 上 10⁵/10⁶/10⁷ CFU 各 1 块 + c₁ 上下各 1–2 个浓度点 +\n"
+                "        非选择板 3 块（分母）+ 备份 1 块\n"
+                "  跑完把每块板的 cfu/clones 写进账本再来。\n"
+                "  规程：docs/protocol-execution.md §1.5；基线：docs/protocol-fstep.md §1.1\n")
         raise ValueError(
             "缺少参数，**不会用默认值代替**：" + "、".join(missing) + "\n"
             "  --records    CSV：cycle,c,when,cfu,clones（when=pre/post；"
@@ -1113,8 +1127,9 @@ def cmd_multitarget(args) -> int:
             "  可选：--nt（饱和密度，给了才出 N₀ 设计行）、--m-off（泄漏速率）、\n"
             "        --n-plate/--n-post（窗口外段，不给则不计并注明）、--bgc-kb、\n"
             "        --margin（默认 3.0）、--c-start（覆盖当前位置）\n"
+            + stage +
             "**如果你是 agent**：请把这段原样呈现给用户并等待明确同意，"
-            "不要自行编造这些值。")
+            "不要自行编造这些值；也**不要在缺账本时直接要 --records**——先把上面的阶段清单给他。")
     if args.markers and args.m_on is not None:
         raise ValueError(
             "--markers 与 --m-on 只能给一个：\n"

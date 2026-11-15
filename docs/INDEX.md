@@ -15,6 +15,7 @@
 | **计数不对劲（回收低、成团、对不上）** | `knowledge-base.md` §8 |
 | **要开 mutator 拿耐受克隆（单步）** | `start-here.md` → `mutator-window.md`（原理）→ 跑 `optimize` |
 | **要多靶点渐升（j≥2）** | `start-here.md` → `protocol-ramp.md`（排阶梯）→ `protocol-execution.md`（怎么走一个周期） |
+| **第一次做多靶点、还没有账本** | **`protocol-execution.md` §1.5「首档剧本」**（S0→S1→S2→S3 四阶段 + 7 块板 + 三闸） |
 | **要测 f_step（配对铺板）** | `protocol-fstep.md` |
 | **某个药能不能外推到另一个药** | `multitarget-model.md` §9（分类轴）→ §10（证据分级） |
 | **单位点 μ 怎么换成全基因组 M** | `knowledge-base.md` §7 |

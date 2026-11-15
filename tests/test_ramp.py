@@ -266,3 +266,45 @@ def test_report_flags_inconsistent_markers(tmp_path, capsys):
     assert cmd_multitarget(_mt_args(tmp_path, markers=str(mk), m_on=None)) == 0
     out = capsys.readouterr().out
     assert "跨标记离散 4.00" in out and "❌" in out and "0.40" in out
+
+
+# ---------------------------------------------------------------- 阶段诊断（2026-11-15）
+
+def test_missing_records_prints_stage_plan():
+    """缺 --records → 不是"少填了个参数"，而是 S0/S1 剧本 + exit 2。"""
+    from windowcalc.cli import cmd_multitarget
+    args = argparse.Namespace(records=None, markers=None, m_on=0.1, genome_mb=5.0,
+                              m_off=None, n_win=4.0, n_plate=0.0, n_post=0.0,
+                              k=30.0, capacity=3e8, c_target=5.0, bgc_kb=None,
+                              margin=3.0, c_start=None, nt=None, sat_f=0.5,
+                              tau_off_h=None, td=None, propagation="manual",
+                              cells_per_colony=None, n0=None, json=False, out=None)
+    with pytest.raises(ValueError) as ei:
+        cmd_multitarget(args)
+    msg = str(ei.value)
+    assert "阶段诊断" in msg
+    assert "MIC" in msg and "基线梯度" in msg
+    assert "c₁" in msg and "首档铺板" in msg
+    assert "§1.5" in msg
+
+
+def test_insufficient_tail_points_prints_s2_plan(tmp_path):
+    """尾部点 <2 → S2 清单（补哪几个点、为什么），不是干巴巴的报错。"""
+    from windowcalc.ramp import run_ledger
+    recs = [("1", 2.0, "post", 3e8, 300)]      # 只有 1 个点
+    with pytest.raises(ValueError) as ei:
+        run_ledger(recs, m_on=0.1, m_off=None, genome_mb=5.0, n_win=4.0,
+                   n_plate=0.0, n_post=0.0, k=30.0, capacity=3e8,
+                   c_target=5.0, bgc_kb=None, margin=3.0)
+    msg = str(ei.value)
+    assert "阶段诊断 S2" in msg
+    assert "补 1 个浓度点" in msg and "洗后悬液" in msg
+    assert "两点才能定斜率" in msg
+
+
+def test_stage_plan_keeps_exit_code_2(tmp_path, capsys):
+    """阶段诊断不许把失败改成成功（缺参铁律：exit 2）。"""
+    from windowcalc.cli import main
+    code = main(["multitarget", "--genome-mb", "5", "--n-win", "4", "--k", "30",
+                 "--capacity", "3e8", "--c-target", "5", "--m-on", "0.1"])
+    assert code == 2
