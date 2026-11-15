@@ -1,3 +1,4 @@
+# 合成演示数据（虚构值，只演示 --markers 的列格式；不是实测、不是默认）
 marker,mu,teff_bp,f
-Rif_demo,1.51e-7,7,78
-Str_demo,8.0e-8,4,72
+markerA_demo,5.0e-8,5,60
+markerB_demo,3.0e-8,3,45

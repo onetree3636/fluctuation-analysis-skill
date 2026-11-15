@@ -745,6 +745,18 @@ def cmd_power(args) -> int:
                         sample_size_precision_analytic, sample_size_precision_sim)
     from .power import sigma_ln_from_cv
     sigma_ln = sigma_ln_from_cv(args.nt_cv)
+    miss = []
+    if args.nt_mean is None:
+        miss.append("--nt-mean")
+    if args.mode == "precision" and args.mu is None:
+        miss.append("--mu")
+    if args.mode == "power" and args.mu1 is None:
+        miss.append("--mu1")
+    if miss:
+        print("缺参数：" + " ".join(miss) + "\n"
+              "本技能不内置任何项目实测默认值（通用性政策，见 docs/generic-policy.md）——"
+              "请填你自己体系的数。", file=sys.stderr)
+        return 2
     if args.mode == "precision":
         from statistics import NormalDist
         if args.conf_level > 0:
@@ -1054,7 +1066,8 @@ def _read_markers_csv(path: str):
     from .mtblocks import Marker
     out = []
     with open(path, newline="", encoding="utf-8-sig") as f:
-        rdr = _csv.DictReader(f)
+        rows = [ln for ln in f if not ln.lstrip().startswith("#")]
+        rdr = _csv.DictReader(rows)
         names = {(c or "").strip() for c in (rdr.fieldnames or [])}
         if not {"marker", "mu", "teff_bp"}.issubset(names):
             raise ValueError(
@@ -1274,10 +1287,13 @@ def build_parser() -> argparse.ArgumentParser:
     ap_pw = sub.add_parser("power", help="样本量/功效分析（解析 + 模拟）")
     ap_pw.add_argument("--mode", choices=["precision", "power"], default="precision",
                        help="precision=估速精度；power=两批比较的检出功效")
-    ap_pw.add_argument("--mu", type=float, default=2e-9, help="precision 模式的 μ")
-    ap_pw.add_argument("--mu1", type=float, default=2e-9, help="power 模式的基线 μ1")
+    ap_pw.add_argument("--mu", type=float, default=None,
+                       help="precision 模式的 μ（必填；本技能不内置任何项目实测默认值）")
+    ap_pw.add_argument("--mu1", type=float, default=None,
+                       help="power 模式的基线 μ1（必填）")
     ap_pw.add_argument("--fold", type=float, default=2.0, help="power 模式要检出的倍数")
-    ap_pw.add_argument("--nt-mean", type=float, default=3e8, help="终末细胞数均值")
+    ap_pw.add_argument("--nt-mean", type=float, default=None,
+                       help="终末细胞数均值（必填）")
     ap_pw.add_argument("--nt-cv", type=float, default=0.0,
                        help="Nt 的真 CV=std/mean（0=恒定）；内部换算 σ_ln=√ln(1+CV²)")
     ap_pw.add_argument("--target-rse", type=float, default=0.25, help="precision：目标 RSE")
@@ -1318,7 +1334,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap_di.add_argument("--ref-dose", type=float, default=None,
                        help="参考剂量（默认取 C50）")
     ap_di.add_argument("--ref-m", type=float, default=None, help="参考剂量处的预期 m（正式模式必填）")
-    ap_di.add_argument("--nt", type=float, default=3e8, help="终末细胞数（CFU/管）")
+    ap_di.add_argument("--nt", type=float, required=True,
+                       help="终末细胞数（CFU/管）——必填，本技能不内置默认值")
     ap_di.add_argument("--precision", type=float, default=None, help="目标 1σ 相对精度（默认 0.20）")
     ap_di.add_argument("--doses", type=float, nargs="*", default=None,
                        help="显式给剂量点（缺省按 C50 自动生成 5 点）")
@@ -1342,7 +1359,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap_tau = sub.add_parser("fit-tauoff", help="τ_off 洗脱衰变拟合（参数 5）")
     ap_tau.add_argument("--input", required=True, help="CSV：h,mu（每行一个时间点）")
     ap_tau.add_argument("--mu-off", type=float, required=True, help="off 态速率（M_off）")
-    ap_tau.add_argument("--td", type=float, default=2.0, help="倍增时间 h（尾部负荷折算）")
+    ap_tau.add_argument("--td", type=float, required=True,
+                        help="倍增时间 h（尾部负荷折算；必填，本技能不内置默认值）")
     ap_tau.add_argument("--m-on", type=float, default=None, help="诱导态速率（尾部负荷用）")
     ap_tau.add_argument("--n-boot", type=int, default=200)
     ap_tau.add_argument("--seed", type=int, default=0)
@@ -1375,8 +1393,8 @@ def build_parser() -> argparse.ArgumentParser:
                        help="泄漏的全基因组速率 M_off（给了才把窗口外段计入乘客；"
                             "不给则报告注明“未计”）")
     ap_mt.add_argument("--n-plate", type=float, default=0.0,
-                       help="每档板内扩张代数（默认 0=不计；估法 log₂(菌落细胞数)，"
-                            "1e8 ≈ 27 代——泄漏核算强烈建议提供）")
+                       help="每档板内扩张代数（默认 0=不计；估法 log₂(每克隆细胞数)，"
+                            "按你自己的菌落大小算——泄漏核算强烈建议提供）")
     ap_mt.add_argument("--n-post", type=float, default=0.0,
                        help="终点后（稳定性/PAP/WGS 前）代数（默认 0=不计）")
     ap_mt.add_argument("--bgc-kb", type=float, default=None,
@@ -1395,11 +1413,11 @@ def build_parser() -> argparse.ArgumentParser:
 NO_CMD_HELP = """你想做什么？
 
   ① 我有每管的抗性菌落数（r）和每管细胞数（Nt），要算突变率
-       windowcalc rate --input 计数.csv --nts 3e8
+       windowcalc rate --input 计数.csv --nts <每管 CFU>
   ② 我想知道这两批（WT / mutator）速率有没有差别
-       windowcalc compare --d1 WT.csv --d2 M7.csv --nt1 3e8 --nt2 3e8
+       windowcalc compare --d1 WT.csv --d2 mut.csv --nt1 <每管 CFU> --nt2 <每管 CFU>
   ③ 我想知道要铺多少管
-       windowcalc power --mode precision --mu 2e-9 --nt-mean 3e8
+       windowcalc power --mode precision --mu <你的 μ> --nt-mean <每管 CFU>
   ④ 我想设计诱导剂浓度 / 算 mutator 表达窗口
        windowcalc design-induction --n-doses 5     →   windowcalc optimize --strain 菌株卡.yaml --protocol 协议卡.yaml
 

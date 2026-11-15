@@ -208,15 +208,15 @@ mutator，防止窗口内丢质粒；但**治愈期（限制温度）必须撤�
 #    ⚠ 这里得到的是**单位点** μ：能直接填的是"比值"（M_off/M_base），
 #      绝对负荷要另用 WGS 折算成全基因组的 M（见 §4 的「M 的量纲」）
 windowcalc rate --input wt.csv --label M_base --field M_base --nt-mode per_tube
-windowcalc rate --input m7on.csv --label M_on_ref --field M_on_ref --nt-mode per_tube
+windowcalc rate --input mut_on.csv --label M_on_ref --field M_on_ref --nt-mode per_tube
 
 # ② 拟合剂量响应与衰变尾（有数据后）
 windowcalc fit-fc --input dose.csv --mu-base <M_base> --query 0.05 0.3 1.0
-windowcalc fit-tauoff --input washout.csv --mu-off <M_off> --td 2.5 --m-on <M_on>
+windowcalc fit-tauoff --input washout.csv --mu-off <M_off> --td <td> --m-on <M_on>
 
 # ②b 先设计剂量轴（不知道 C50 也行；卡里有 c50 就 --strain）
-windowcalc design-induction --strain strain.yaml --ref-m 6
-windowcalc design-induction --n-doses 4 --range 0.03 3
+windowcalc design-induction --strain strain.yaml --ref-m <m> --nt <Nt>
+windowcalc design-induction --n-doses 4 --range 0.03 3 --nt <Nt>
 
 # ③ 填 strain_card / protocol_card（examples/ 有模板）
 #    注意 type 必须加引号（YAML 1.1 把裸 off/on 当布尔）

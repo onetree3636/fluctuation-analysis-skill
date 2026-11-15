@@ -15,9 +15,9 @@
 | 1 | 基因组多大（Mb）？ | `genome_mb` | 必填（没有就不算保护区账本） |
 | 2 | 要保护的产物基因簇多大、几拷贝？ | `protected[{role: bgc, kb, copies}]` | 可跳过 |
 | 3 | mutator 在质粒上吗？质粒多大、拷贝数多少？ | `plasmids[{kb, copies}]` + `protected[{role: mutator}]` | 可跳过 |
-| 4 | 这个速率是**用哪个标记/药物**测的？窗口里**打算用哪个标记**筛？ | `mu_supply` + `mu_supply_source` / `selection_marker` | 两个都写进卡片；**不同 → 按 `references/markers.md` 处理**；没测 → 先给测量方案（见 1.1）；只想要量级才用 2×10⁻⁸ |
+| 4 | 这个速率是**用哪个标记/药物**测的？窗口里**打算用哪个标记**筛？ | `mu_supply` + `mu_supply_source` / `selection_marker` | 两个都写进卡片；**不同 → 按 `references/markers.md` 处理**；没测 → 先给测量方案（见 1.1）；只想要量级 → 引一条**文献**的同类体系数值，并在卡片里写出处（标 assumed） |
 | 5 | WT 的全基因组乘客速率有吗（M_base）？ | `M_base` | **0.004**（Drake 量级，assumed） |
-| 6 | 诱导/关闭时间常数、倍增时间？ | `tau_on_h` / `tau_off_h` / `td_h_on` / `td_h_off` | **2 h / 4 h / 2.5 h / 2.0 h** |
+| 6 | 诱导/关闭时间常数、倍增时间？ | `tau_on_h` / `tau_off_h` / `td_h_on` / `td_h_off` | **必填**（写进菌株卡；没测 → `td` 用你自己生长曲线的对数期；`τ_off` 未测时按稀释上界 1.44×td 起，标 assumed） |
 
 ### 1.1 μ_supply 没测怎么办（不要直接填默认）
 

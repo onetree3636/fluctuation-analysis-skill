@@ -230,7 +230,8 @@ f_step(校正) = f_post − f_pre
 
 ```
 python3 run.py multitarget --records records.csv --markers markers.csv \
-    --genome-mb 7.5 --n-win 4 --k 30 --capacity 6e7 --c-target 5
+    --genome-mb <你的基因组 Mb> --n-win <窗口代数> --k <目标克隆数> \
+    --capacity <板预算 CFU> --c-target <目标浓度>
 ```
 
 （2026-11-14 起 `fstep` 子命令已并入 `multitarget`，单档口径由输出①覆盖。）

@@ -9,15 +9,15 @@
 
 混合规则 φ（复制的两种 Pol III 核心怎么装）：
     linear     φ = p                 平均效应
-    two_core   φ = 2p − p²           至少一个核心是 M7（ψ = 2h − q h²）
-    both_core  φ = p²                两个核心都要 M7（ψ = h²）
+    two_core   φ = 2p − p²           至少一个 Pol III 核心带 mut 等位（ψ = 2h − q h²）
+    both_core  φ = p²                两个核心都要带 mut 等位（ψ = h²）
 
 可辨识性（重要，别把不可辨识的量当结论）：
     - 从 (c, M) 数据只能稳健定出 **A = ΔM·q**（有效占位幅度）、C50、n；
     - q 只在 two_core 下由曲率可分（因为 ψ=2h−q h² 里 2A 与 Aq 可分别定）；
     - both_core 下 q 与 A 退化（只能定 B = A·q）；
     - linear 下 q 完全不可辨识。
-    要拆开 q 与 ΔM，必须有独立表达读出（报告基因/定量）或"纯 M7"锚点。
+    要拆开 q 与 ΔM，必须有独立表达读出（报告基因/定量）或"纯 mut"锚点。
 """
 
 from __future__ import annotations

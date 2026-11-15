@@ -181,7 +181,7 @@ def _():
 @check("design-induction：剂量轴设计（覆盖检查 + 每点管数）")
 def _():
     p = run(["design-induction", "--c50", "0.48", "--n-hill", "1.85",
-             "--ref-dose", "0.3", "--ref-m", "6"])
+             "--ref-dose", "0.3", "--ref-m", "6", "--nt", "2e8"])
     assert p.returncode == 0, p.stderr[:400]
     assert "覆盖检查" in p.stdout and "合计" in p.stdout
     assert "C50 以下 2 点" in p.stdout or "以下 2 点" in p.stdout
@@ -198,16 +198,16 @@ def _():
     assert 8.0 <= theta <= 14.0, f"θ={theta} 偏离真值 10 太多"
 
 
-@check("fit-induction：剂量轴机制模型（Δsat≈1.315）")
+@check("fit-induction：剂量轴机制模型（合成数据 Δsat≈0.80）")
 def _():
     p = run(["fit-induction", "--input", "examples/acceptance/dose_induction.csv",
-             "--m-off", "0.012", "--query", "0.5"])
+             "--m-off", "0.02", "--query", "0.5"])
     assert p.returncode == 0, p.stderr[:500]
     assert "Δsat" in p.stdout and "饱和" in p.stdout
     import re as _re
     m = _re.search(r"Δsat = ([\d.]+)", p.stdout)
     assert m, p.stdout[:400]
-    near(float(m.group(1)), 1.315, 0.02, "Δsat")
+    near(float(m.group(1)), 0.80, 0.02, "Δsat")
 
 
 @check("power：解析式样本量 C=131")
@@ -276,8 +276,8 @@ def _():
     assert "不要自行编造这些值" in p.stderr, "缺 agent 禁令提示"
     ok = run(["multitarget", "--records", "examples/records_template.csv",
               "--markers", "examples/acceptance/markers_demo.csv",
-              "--genome-mb", "7.5", "--n-win", "4", "--k", "30",
-              "--capacity", "3e8", "--c-target", "5", "--bgc-kb", "83"])
+              "--genome-mb", "5.0", "--n-win", "4", "--k", "30",
+              "--capacity", "3e8", "--c-target", "5", "--bgc-kb", "40"])
     assert ok.returncode == 0, f"账本主路径应 exit 0：{ok.stderr[:400]}"
     for key in ("各档 f_step", "PAP 曲线现状", "下一窗设计", "剩余梯级"):
         assert key in ok.stdout, f"缺章节：{key}"
@@ -288,7 +288,7 @@ def _():
     """fstep 并入后的口径：输出①必须含 Wilson/Newcombe 区间与逐档 f_step。"""
     p = run(["multitarget", "--records", "examples/records_template.csv",
              "--markers", "examples/acceptance/markers_demo.csv",
-             "--genome-mb", "7.5", "--n-win", "4", "--k", "30",
+             "--genome-mb", "5.0", "--n-win", "4", "--k", "30",
              "--capacity", "3e8", "--c-target", "5"])
     assert p.returncode == 0, p.stderr[:300]
     assert "Wilson" in p.stdout or "Newcombe" in p.stdout or "f_step" in p.stdout
@@ -370,6 +370,50 @@ def _():
 
     C = sample_size_precision_analytic(2e-9, 3e8, 0.25, conf_level=0.95)
     assert f"C={C}" in testing, f"testing.md 的解析样本量不是 {C}（请同步「已知答案」表）"
+
+
+# ---------------------------------------------------------------- 通用性
+# 通用性政策（docs/generic-policy.md）：技能里不得出现本项目专属的药物名/参数。
+# 表里每条都是"曾经泄漏过"的真实串——新增内容前先想清楚为什么要往里加。
+GENERIC_BANNED = [
+    (r"茶碱|theophyllin", "本项目诱导剂名"),
+    (r"\bpolC\b", "本项目靶点基因名"),
+    (r"\bM7\b", "本项目菌株代号"),
+    (r"0\.162", "本项目诱导幅度"),
+    (r"8\.7\s*(?:e-3|×10\^?-3|×10⁻³)", "本项目泄漏速率"),
+    (r"1\.51e-7|1\.94e-9|8\.12e-9", "本项目实测 μ"),
+    (r"7\.5\s*Mb", "本项目基因组大小"),
+    (r"83\s*kb", "本项目保护区大小"),
+    (r"78\s*倍", "本项目 F 值"),
+]
+
+
+@check("通用性：技能内无项目专属药物名/参数（docs/generic-policy.md）")
+def _():
+    """两条硬规则：①药名只许来自引用文献；②默认值只许来自文献确证的通用值。
+
+    这里只挡"已经泄漏过一次"的串——新写的数字不在表里不会报警，
+    所以 docs/generic-policy.md §5 的五问仍然是必须做的。
+    """
+    targets = [ROOT / "SKILL.md", ROOT / "CHANGELOG.md"]
+    targets += sorted((ROOT / "docs").glob("*.md"))
+    targets += sorted((ROOT / "references").glob("*.md"))
+    targets += sorted((ROOT / "windowcalc").glob("*.py"))
+    for pat in ("*.csv", "*.yaml", "*.md"):
+        targets += sorted((ROOT / "examples").rglob(pat))
+
+    hits = []
+    for f in targets:
+        try:
+            text = f.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+        for i, line in enumerate(text.splitlines(), 1):
+            for rx, why in GENERIC_BANNED:
+                if re.search(rx, line):
+                    hits.append(f"{f.relative_to(ROOT)}:{i}: {why} → {line.strip()[:70]}")
+    assert not hits, ("命中项目专属内容（通用性政策，见 docs/generic-policy.md）：\n  "
+                      + "\n  ".join(hits[:20]))
 
 
 def main() -> int:

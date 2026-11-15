@@ -7,7 +7,7 @@
 
 ```bash
 cd 技能目录
-python selftest.py            # 23 项，约 40–100 s
+python selftest.py            # 24 项，约 40–100 s
 python selftest.py --quick    # 只查环境与命令（约 2 s）
 ```
 

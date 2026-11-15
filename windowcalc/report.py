@@ -152,7 +152,8 @@ def render_optimize_report(card: StrainCard, phases: list, candidates: list,
                      f"本方案 {occ:.2g} ≈ 基线——等于没开 mutator，先查 M_on 的量纲/单位。")
     else:
         lines.append(f"> 参考量级：按你卡的 M_base 算，「不开 mutator」的基线 ≈ {baseline:.2g} 个乘客/克隆；"
-                     f"全强度 M7 一轮 20–27 代 ≈ **66–96**（gkab583 WGS）——本方案 {occ:.1f} ≈ 全强度的 {occ / 81:.0%}。")
+                     f"全强度 mutator（文献例 gkab583，3–4 个突变/基因组/代）× 一轮 20–27 代 ≈ **66–96**——"
+                     f"本方案 {occ:.1f} ≈ 该文献量级的 {occ / 81:.0%}。")
     lines.append("")
     if meta.get("protection_binding"):
         cap_p = meta.get("protection_cap")
