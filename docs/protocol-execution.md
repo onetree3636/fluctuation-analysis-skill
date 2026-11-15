@@ -12,6 +12,12 @@
 > ⚠️ **本文档刻意不含任何具体数值**（通用性政策：见 `generic-policy.md`）。
 > 所有例子都用符号（`M_on` / `M_off` / `f` / `Nt` / `N₀` / `n_win` / `n_plate`），
 > 数由你自己的菌株卡与实测填。
+>
+> **一张图看懂整个周期** → `figures/cycle-liquid-propagation.png`（由 `figures/make_cycle_schematic.py` 生成；
+> 图中同样**不含任何数值**，只画结构与公式）。用户问"一个浓度周期长什么样 / 涂板还是液传代怎么排"时，
+> 直接展示这张图再按本文档解读。
+>
+> ![一个浓度周期](figures/cycle-liquid-propagation.png)
 
 ---
 

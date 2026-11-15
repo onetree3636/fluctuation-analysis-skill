@@ -305,7 +305,9 @@ def _():
             t = target.split("#")[0].strip()
             if not t:
                 continue
-            resolved = (ROOT / t) if not t.startswith(".") else (d.parent / t)
+            # 相对链接先按文件所在目录解析，再退回仓库根（两处都找不到才算断链）
+            cand = d.parent / t
+            resolved = cand if cand.exists() else (ROOT / t)
             if not resolved.exists():
                 missing.append(f"{d.name} → {t}")
     assert not missing, "断链：" + "; ".join(missing)
@@ -328,11 +330,14 @@ def _():
     assert not bad, "未知子命令：" + "; ".join(bad)
 
 
-@check("文档：四个用途的入口文件都在")
+@check("文档：核心入口文件与配图都在")
 def _():
     for f in ("docs/knowledge-base.md", "docs/experiment-design.md",
               "docs/mutator-window.md", "examples/record-template.csv",
-              "examples/raw_counts_template.csv"):
+              "examples/raw_counts_template.csv",
+              "docs/generic-policy.md", "docs/protocol-execution.md",
+              "docs/figures/cycle-liquid-propagation.png",
+              "docs/figures/make_cycle_schematic.py"):
         assert (ROOT / f).exists(), f"缺 {f}"
 
 
