@@ -96,6 +96,7 @@ min E[P] s.t. P(≥k) ≥ 0.95，蒙特卡洛传播 CI 与克隆间离散（gkab
 
 | 想做什么 | 看哪里 |
 |---|---|
+| **不知道读哪篇** | **`docs/INDEX.md`（唯一入口：按"我现在要干什么"路由，每篇开头有级别与"何时读我"）** |
 | 设计波动实验 / 测参数 | `docs/experiment-design.md` |
 | 理解窗口模型 | `docs/mutator-window.md` |
 | 多靶点/膜活性药 | `docs/multitarget-model.md`（模型）· `docs/multitarget-extrapolation.md`（分类轴）· `docs/protocol-fstep.md`（f_step 铺板规程）· `docs/protocol-ramp.md`（阶梯规划） |

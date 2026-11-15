@@ -399,6 +399,29 @@ GENERIC_BANNED = [
 ]
 
 
+@check("文档：分级横幅齐全、索引存在（docs/INDEX.md）")
+def _():
+    """2026-11-15 的"减法"：文档只能有一个入口。
+
+    每篇 docs/*.md 的 H1 下方必须有一行 `> **级别：…** ｜ 什么时候读我：… ｜ 不用读我：…`
+    且级别 ∈ {必读, 主路径, 附录}——否则读者又会多一个"不知道要不要点开"的入口。
+    """
+    idx = ROOT / "docs" / "INDEX.md"
+    assert idx.exists(), "缺 docs/INDEX.md（唯一入口）"
+    levels = ("必读", "主路径", "附录")
+    bad = []
+    for d in sorted((ROOT / "docs").glob("*.md")):
+        if d.name == "INDEX.md":
+            continue
+        head = "\n".join(d.read_text(encoding="utf-8").splitlines()[:12])
+        if "> **级别：" not in head:
+            bad.append(f"{d.name}: 缺分级横幅")
+            continue
+        if not any(f"> **级别：{lv}" in head for lv in levels):
+            bad.append(f"{d.name}: 级别不在 {levels}")
+    assert not bad, "；".join(bad)
+
+
 @check("通用性：技能内无项目专属药物名/参数（docs/generic-policy.md）")
 def _():
     """两条硬规则：①药名只许来自引用文献；②默认值只许来自文献确证的通用值。

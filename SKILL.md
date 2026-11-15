@@ -141,32 +141,21 @@ mutator 会改道（pbio.3001878）——单步效应按实测走，文献只定
 
 ## 细节在哪
 
-- `references/commands.md`：子命令完整用法、输入格式、输出与边界、实测数字。
-- `references/install.md`：首次运行、venv/镜像、Windows、导入其它 agent、故障救援。
-- `references/maintainer.md`：selftest、sync_skill、与 rSalvador/flan 对拍、发布检查单。
-- `references/guardrails.md`：新手盲区排查表（哪些话用户不会主动说、必须问）。
-- `references/markers.md`：标记外推（哪种能按 T_eff 换算、哪种必须实测）。
-- `docs/experiment-design.md`、`docs/mutator-window.md`、`docs/knowledge-base.md`、`docs/tutorial.md`、`docs/glossary.md`。
-- `docs/viable-count-problems.md`：活菌计数不准（随机误差/低回收/团块/VBNC/超范围）的诊断与校正/替代计数。
-- `docs/protocol-fstep.md`：**f_step 铺板规程**（配对设计、板量倒推、Wilson CI、背景扣除——多靶点主路径的实验侧，按文献/推导/约定三级标注）。
-- `docs/multitarget-code-map.md`：**多靶点路径的代码地图**——模型/公式/算法落在哪个函数、
-  数据在进模型前怎么处理、明确不建模的 7 条、以及**同一批公式有两套实现**（改一处要改两处）
-  的维护者须知 + 对拍测试 `tests/test_ledger_formula_pin.py`。
-- `docs/generic-policy.md`：**通用性政策**——药物名只许来自引用文献、默认值只许来自文献确证的通用值；
-  三类载体的写法、自动守卫、新增内容五问。
-- `docs/figures/`：**三张符号化配图**（都不含任何数值，生成脚本同目录、可复现）——
-  `cycle-liquid-propagation.png`（一个周期长什么样）· `propagation-topologies.png`（板传代 vs 液传代）·
-  `decide-plating-and-timing.png`（涂多少 / 何时能接下一档）。
-- `docs/figures/cycle-liquid-propagation.png`：**周期示意（一张图）**——液传代 + 涂板审计的时间轴、
-  四段乘客账（只标公式）、五处去向与四条红线。**图中不含任何数值**（通用性政策）。
-  用户问“一个浓度周期长什么样 / 涂板还是液传代怎么排”时，展示这张图并按 `docs/protocol-execution.md` 解读。
-- `docs/protocol-execution.md`：**浓度周期的执行层**——涂板比例（0.1–10%，由目标克隆数反算）、剩余菌体五个去处、**板传代 vs 液传代**（含 f_liq/f_plate 桥接验证）、并行时序与四条护栏、乘客账随拓扑的变化（板/液两套符号式）、一页操作卡与七条红线。
-- `docs/protocol-ramp.md`：**渐升（ramp）规划与预测规程**——文献两大流派对照、birth-death-mutation 模型的预测边界（pcbi.1014666 精读）、`ramp` 规划器的数学（PAP 拟合/平稳补充/三段账/失守严格式）、记录字段表
-- `docs/start-here.md`：**多靶点入门（5 分钟，零公式）**——三个是非题决定下一步。
-- `docs/multitarget-tutorial.md`：**10 分钟上手**——从“我的 mutator 快 F 倍”到排布表与结论。
-- `docs/multitarget-model.md`：进阶数学（供给饱和、三种标度律、α 的斜率法、局限）。
-- `docs/multitarget-extrapolation.md`：S/C/U 分类轴（为什么不能按药类分、两条修正项）。
-- `docs/resistance-evidence-tiers.md`：S/C/U 的证据从哪来（D1 单步筛选 → D2 传代 → D3 测序）。
-- `references/multitarget-intake.md`：**给 agent 的 L2 接入**——从一句话判断 mode、三问定参、缺参不得自行同意。
-- `references/multitarget-guardrails.md`：多靶点必问清单（3 条必问、5 个高频误解、3 个静默改结论的输入）。
-- 维护者自检 **24 项：环境**、入口自举、规范校验、**9 个子命令**、Excel、已知答案、端到端报告、文档一致性、错误路径、断链、多靶点缺参拦截、**通用性（无项目专属药物名/参数）**。
+**入口只有一个：`docs/INDEX.md`**——19 篇文档按"我现在要干什么"路由；
+每篇开头都有一行「级别 ｜ 什么时候读我 ｜ 不用读我」，按那行判断要不要继续看。
+
+- **必读 3 篇**：`docs/tutorial.md`（算突变率）· `docs/protocol-execution.md`（走一个浓度周期）·
+  `docs/multitarget-code-map.md`（维护者：改公式/审代码 → 改一处要改两处）
+- **主路径 4 篇**：`docs/start-here.md`（多靶点 5 分钟判断）· `docs/experiment-design.md`（设计波动实验）·
+  `docs/protocol-fstep.md`（测 f_step）· `docs/protocol-ramp.md`（排阶梯与乘客账）
+- **附录 12 篇**：原理（knowledge-base / mutator-window / multitarget-model / mu-genome-derivation）、
+  判断（multitarget-extrapolation / resistance-evidence-tiers）、诊断（viable-count-problems）、
+  工具书（glossary）、概念演示（multitarget-tutorial，**命令已撤**）、维护者（generic-policy / testing）、
+  历史（software_audit_2026-10-30）
+- `docs/figures/`：三张符号化配图（**不含任何数值**，生成脚本同目录、可复现）——
+  周期结构 / 两种传代拓扑 / 两个决策。用户问"一个浓度周期长什么样"时，展示
+  `figures/cycle-liquid-propagation.png` 并按 `protocol-execution.md` 解读。
+- **`references/`（agent 专用）**：`commands.md`（9 个子命令逐条）· `guardrails.md`（必问清单）·
+  `markers.md`（标记外推）· `multitarget-intake.md` + `multitarget-guardrails.md`（多靶点接入）·
+  `install.md` / `maintainer.md`（部署与发布）
+- 维护者自检 **25 项：环境**、入口自举、规范校验、**9 个子命令**、Excel、已知答案、端到端报告、文档一致性、错误路径、断链、多靶点缺参拦截、**通用性（无项目专属药物名/参数）**、**文档分级（每篇有级别横幅 + INDEX 存在）**。
