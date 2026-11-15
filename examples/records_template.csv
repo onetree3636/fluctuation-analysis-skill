@@ -1,3 +1,4 @@
+# 合成示例（非实测、非默认）：只演示账本 schema cycle,c,when,cfu,clones；数字是编的。
 cycle,c,when,cfu,clones
 1,2,pre,3.0e8,0
 1,2,post,3.0e8,300

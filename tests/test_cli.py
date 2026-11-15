@@ -222,17 +222,39 @@ def test_acceptance_xlsx_matches_csv():
 
 
 def test_fill_defaults_and_bundled_protocol(tmp_path):
-    """无感路径：最小菌株卡 + --fill-defaults；协议卡可省略（用内置模板）。"""
+    """无感路径：--fill-defaults 只补「与体系无关」的量（通用性政策规则二）。
+
+    2026-11-15 修正：旧版会连 mu_supply / tau / td / ref_dose 一起编默认值——
+    那正是政策禁止的"把别人的实验当通用推荐"。现在这六项缺就报错。
+    """
     from pathlib import Path
     from windowcalc.cli import CardError, load_protocol, load_strain_card
     p = tmp_path / "min.yaml"
     p.write_text("strain: t\n", encoding="utf-8")
     with pytest.raises(CardError):
         load_strain_card(str(p))
-    card = load_strain_card(str(p), fill_defaults=True)
+
+    # 只补约定/文献量级的三项，测得的物理量不给编 → 仍然报错
+    with pytest.raises(CardError) as ei:
+        load_strain_card(str(p), fill_defaults=True)
+    msg = str(ei.value)
+    assert "mu_supply" in msg and "td_h_on" in msg, "应点名缺哪些实测项"
+
+    # 把六项实测/物理量补齐后，--fill-defaults 才能跑
+    q = tmp_path / "ok.yaml"
+    q.write_text(
+        "strain: t\n"
+        "mu_supply: {value: 2e-8, status: assumed}\n"
+        "tau_on_h: {value: 2.0, status: assumed}\n"
+        "tau_off_h: {value: 4.0, status: assumed}\n"
+        "td_h_on: {value: 2.5, status: assumed}\n"
+        "td_h_off: {value: 2.0, status: assumed}\n"
+        "ref_dose_mM: {value: 0.3, status: assumed}\n",
+        encoding="utf-8")
+    card = load_strain_card(str(q), fill_defaults=True)
     assert card.M_base.value == pytest.approx(0.004)
     assert card.M_base.status == "assumed"
-    assert card.mu_supply.value == pytest.approx(2e-8)
+    assert card.mu_supply.value == pytest.approx(2e-8)   # 来自卡片，不是内置默认
     bundled = Path(__file__).resolve().parent.parent / "examples" / "protocol_card.example.yaml"
     phases, dec = load_protocol(str(bundled))
     assert phases and dec.k_target_clones >= 1

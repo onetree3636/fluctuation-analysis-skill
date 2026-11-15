@@ -1,6 +1,6 @@
 # protocol_card —— 瞬变脉冲协议示例（README §1 的相位表）
 # ⚠️ type 的取值必须加引号：YAML 1.1 会把裸 off/on 解析成布尔 False/True
-protocol: NRRL30420-pulse-v1
+protocol: example-strain-pulse-v1
 phases:
   - {name: 接合后恢复预培养, type: "pre",   duration_h: 24, N0: 1.0e5, Nt: 1.0e8}
   - {name: 诱变脉冲,         type: "pulse", duration_h: 18, dose_mM: 0.3, N0: 1.0e7}

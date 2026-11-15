@@ -2,6 +2,65 @@
 
 ## 未发布（工作区，2026-11-14 起）
 
+### Fixed（2026-11-15 二审：全量核查文档/代码，修 17 处）
+
+一次系统审计（机械交叉核查 + 手算 + 变异测试）确认 17 处矛盾/错误。**基线当时全绿**
+（selftest 28 项、pytest 199 项），所以每一条都是现有检查的盲区。
+
+**P0（会让人做错实验/得出错数）**
+
+1. `docs/protocol-execution.md` §2.3 涂板比例表：表头写 `Nt=10⁹/mL、10 mL`（=1e10 CFU），
+   比例列却按 **1 mL** 算 → 整列差 10 倍，且"10⁻⁷ 必须全涂"的结论反了。改为
+   `Nt=10⁹ CFU/管（10 mL 培养物）`（与全篇"Nt=CFU/管"口径一致），并补单位换算告警
+   与"整管都得涂 ≠ 精度需要全涂"的澄清。
+2. `references/commands.md` **缺 `multitarget` 整节**（8/9 个子命令），而 SKILL.md 与
+   INDEX 都写着"9 个子命令逐条"。补 §9（六项必填 / 账本 schema / 五节输出 / 阶段诊断 /
+   三条硬口径），原 §9 顺延为 §10。
+3. `references/maintainer.md` 发布检查单要求"保留 `21 项：环境` 与 `8 个子命令` 两个**字面量**"
+   ——实际是 **28 项 / 9 个子命令**，照做会把正确值改回错误并让自检变红。改为不写死项数，
+   并说明"跑 selftest 让它告诉你"。
+4. `--fill-defaults` 内置了项目推导值（`mu_supply=2e-8`、`td=2.5/2.0`、`tau=2/4`、
+   `ref_dose=0.3`），违反通用性政策规则二，而政策 §6 还声称"代码默认值已改为必填"。
+   现在只补 4 项与体系无关的量（`M_base / M_on_ref / M_off / Nt_saturation`），
+   其余 6 项**缺就报错**并点名（`docs/generic-policy.md` 规则二）。
+5. `docs/multitarget-code-map.md` §2.4 公式块是**旧版**：标题"三段"、写 `n_plate·M_off`、
+   无洗脱尾/终点后。改为四段 + `n_inter`，并标注"旧说法已废"。
+
+**P1（误导维护者 / 边界不可靠）**
+
+6. `ramp.py` 打印给用户的 **N₀ 设计行零测试覆盖**：改坏它，19 项 pin + 55 项其余测试全绿；
+   而代码地图声称"改 ramp 会红 2 项"。新增 `test_rendered_n0_design_line_is_correct`
+   （2 个参数），变异复验：该行改坏 → **2 项失败**，与文档一致。
+7. 代码地图行号整体漂移（`washout_tail` 139→189、`cmd_multitarget` 1157→1101、
+   `plan_ramp` 206→225、设计行 495→622、`mtblocks` 162→170、`cli` 1456→1463…），
+   且**N₀ 公式实际有三处拷贝**（不是两处）。全部刷新，并加"行号会漂，用 grep 定位"。
+8. `docs/generic-policy.md` 引用"`selftest` 第 25 项"（实为第 27 项），且"14 篇上限"当时
+   **没有任何检查在管**。改指名称，并**真的加了一条断言**（`docs/*.md` 超 14 篇直接红）。
+9. `references/maintainer.md` 指向 `dev/*.md`（不存在，实际在 `archive/window-calculator.bak-*`）
+   与"现 v0.7.0"（实际 0.9.0）。改为按目录说明 + "版本只看 `__init__.py`"。
+10. `docs/multitarget-model.md` §7 把公式映射到**已删除模块** `windowcalc/multitarget.py`
+    （`supply_per_gen`/`t_single_step`/`accel`/`design` 全部不存在）。改为现役函数表 +
+    明写"本章只作'为什么不能这么算'的记录"。
+11. 示例数据 12 个文件只有 2 个带出处标注（政策要求文件头写明）。全部补齐：
+    文献集（RF2000/Demerec/LD1943/gbk 转存）与合成集（groupA/B、plating_z02、两个模板）。
+    账本读取器新增 `#` 注释行跳过（行号报错仍准确）。
+12. **通用性漏网**：三个示例 YAML 直接用本项目产生菌的菌株号。改为 `example-strain`，
+    并把该菌株号（见 `selftest.py` 的 `GENERIC_BANNED`）写成回归钉子。
+
+**P2（表述 / 卫生）**
+
+13. `docs/knowledge-base.md` §4.2 自指链接（"见 docs/knowledge-base.md"）→ 指向本文 §8。
+14. `docs/tutorial.md` 样例报告头 `v0.7.0`（实际 0.9.0）→ 改为 v0.9.0 + "示例"标注。
+15. 两处"本项目全部是升浓度协议"→"本技能面向的体系都是…"。
+16. 两张 CI 表口径未标注：`protocol-fstep` 是对称摘要、`protocol-execution` 是非对称端点，
+    同一 k 给两套数。各加一行口径说明，不再让人以为其一算错。
+17. `protocol-ramp` §7 写"输出四段"，实际报告是五节（末节"怎么读"）。
+
+- 验证：`selftest` 27 通过 / 1 跳过（源目录）、`pytest` 201 passed；变异复验三处
+  （mtblocks 4 项、inter_rung 1 项、渲染设计行 2 项）。
+- **未改**：`protocol-ramp.md` 里 `microbisporicin` / `MibEF` 那处（政策规则一字面允许：
+  文献中出现且同段给了 DOI）——留待决定是否按"通用性精神"再收紧。
+
 ### Fixed（2026-11-15，护栏反向覆盖：修掉两条"孤儿规则"）
 
 **问题**：护栏覆盖检查只做了单向——「每个子命令都在 §0」✅，但反向没查：

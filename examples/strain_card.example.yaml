@@ -1,5 +1,7 @@
-# strain_card —— NRRL30420 示例（数值为占位假设，status 标注出处；实测后逐项替换）
-strain: NRRL30420
+# ⚠ 示例配置：所有数值都是**占位/示意**，不是任何体系的实测或推荐值。
+#   用途只是让命令能跑通；请逐项替换为你的实测（status: measured）。
+# strain_card —— example-strain 示例（数值为占位假设，status 标注出处；实测后逐项替换）
+strain: example-strain
 M_base:              {value: 0.004,  ci: [0.002, 0.008], status: literature, note: "MA-WGS 量级（Drake），待波动分析替换"}
 M_on_ref:          {value: 0.4,    ci: [0.2, 0.9],     status: assumed,    note: "≈M_base×100；待波动分析（mutator-on 组）"}
 M_off:             {value: 0.012,  ci: [0.006, 0.03],  status: assumed,    note: "合格线 ≤3×M_base（docs/mutator-window.md §7）"}

@@ -68,7 +68,7 @@ T_j = Σ_{i=1..j} 1/(2·N·μ_i·s_i) ≈ j · T_A
 **这是最常被误解的一点。** 即使要 5 步，mutator 的加速仍是 `F`，
 因为时间是若干"`1/μ`"的**和**，不是乘积。
 
-> **C 律（谷型，`T ∝ μ^-j`）已于 2026-11-12 移除**：本项目全部是升浓度协议（连续性状，
+> **C 律（谷型，`T ∝ μ^-j`）已于 2026-11-12 移除**：本技能面向的体系都是升浓度协议（连续性状，
 > 如 1 g/L → 5 g/L），中间态在结构上必然可被选择，谷型不会发生。保留它只会让人误以为
 > 报告里的 `F^j` 需要认真对待。若将来真遇到谷型体系，公式是 `T_j = s^(j−2)/(2Nμ^j)`
 > （Iwasa/Michor/Nowak 2004；Armitage & Doll 1954），按此重写即可。
@@ -140,14 +140,20 @@ T_B = 3 × 0.25               = 0.75 代
 
 ## 7. 与代码的对应
 
-| 公式 | 函数（`windowcalc/multitarget.py`） |
+> ⚠ 2026-11-13 的路线收缩**删除了本章描述的整条"供给外推"实现**：
+> `windowcalc/multitarget.py` 已不存在（`supply_per_gen` / `t_single_step` / `t_serial` /
+> `accel` / `fit_alpha` / `design` 全部移除）。本章的公式**只作为"为什么不能这么算"的记录**，
+> 不是可调用代码。现役实现见下表。
+
+| 公式（现役） | 函数 |
 |---|---|
-| `S = N·μ` | `supply_per_gen` / `saturation` |
-| `T_A` | `t_single_step` |
-| `T_B` | `t_serial` |
-| `F^α` | `accel` |
-| 斜率拟合 | `fit_alpha` |
-| 设计/可辨识性 | `design` / `_resolvable_alpha` |
+| 供给（实测，不外推） | `f_step` 来自铺板账本：`ramp.run_ledger` |
+| 乘客 `M_on = μ_perbp × G` | `mtblocks.mu_perbp` + `ramp.plan_ramp` |
+| 齐次化阶梯 `f(c) = f_ref·10^(−(c−c_ref)/δ)` | `ramp.fit_pap` / `ramp.predict_f` |
+| 四段乘客账与失守概率 | `ramp.plan_ramp`（`p_bgc`） |
+| 剂量轴 `M(c)` 机制模型 | `induction.fit_induction` |
+
+完整的"公式 ↔ 函数 ↔ 行号"对照见 `docs/multitarget-code-map.md`。
 
 ---
 
@@ -244,7 +250,7 @@ mutator 的全基因组置换率 5.5×10⁻⁸/bp/代——这类已发表 WGS �
 ```
 
 所以加速比就是 **`F`**：`k` 只影响"多久"，不影响"快几倍"。
-（`F^j` 是"谷型"情形的上界，**本实现不建模**——见 `multitarget.py` 模块头。）
+（`F^j` 是"谷型"情形的上界，**本实现不建模**——原推导留在 `CHANGELOG.md` 2026-11-12 条与 `docs/multitarget-tutorial.md` §2 的说明里。）
 
 ---
 

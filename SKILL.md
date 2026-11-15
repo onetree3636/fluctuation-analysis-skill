@@ -97,7 +97,7 @@ mutator 会改道（pbio.3001878）——单步效应按实测走，文献只定
 | rate | 计数 → μ | `--field`（M_base/M_on_ref/M_off/mu_supply）、`--nt-mode per_tube`、`--fraction-plated` |
 | compare | 两批比较 | `--d1/--d2`、`--labels`、`--nt1/--nt2` |
 | power | 样本量 / 功效 | `--mode`（precision/power）、`--conf-level 0` = 1σ |
-| optimize | 窗口三旋钮 | `--strain`（必填）+ `--protocol`（可省）；`--fill-defaults` 补缺项 |
+| optimize | 窗口三旋钮 | `--strain`（必填）+ `--protocol`（可省）；`--fill-defaults` 只补 4 项约定量 |
 | design-induction | 剂量轴布点 | `--strain` / `--c50` / `--doses` |
 | fit-induction | 剂量机制 | `--m-off`、`--query` |
 | fit-fc | 剂量响应 | `--mu-base` |

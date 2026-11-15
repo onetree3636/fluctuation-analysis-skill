@@ -55,7 +55,9 @@
 
 - 回答齐 → agent 写 `<strain>.yaml`；缺的必填项可以两个办法：
   - 写全（推荐，`status: assumed` 标清楚）；
-  - 或直接 `optimize --strain card.yaml --fill-defaults`（缺项自动补默认，stderr 会列出补了哪些）。
+  - 或 `optimize --strain card.yaml --fill-defaults`——**只补 4 项与体系无关的量**
+    （M_base / M_on_ref / M_off / Nt_saturation）；`mu_supply`、τ_on/τ_off、td_on/td_off、
+    `ref_dose_mM` 这 6 项是你体系的实测物理量，它**不会**替你编，缺就报错（政策规则二）。
 - 协议卡：`optimize --strain card.yaml` 即可（不带 `--protocol`）。
 - 跑完把 `保护上限 binding` / `红灯` / `★未测` 三件事如实转告。
 

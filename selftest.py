@@ -396,6 +396,9 @@ GENERIC_BANNED = [
     (r"83\s*kb", "本项目保护区大小"),
     (r"78\s*倍", "本项目 F 值"),
     (r"4\.2\s*×", "本项目泄漏倍数"),
+    # 2026-11-15 二审新增：示例 YAML 里曾直接用本项目产生菌的菌株号
+    (r"NRRL\s*30420", "本项目产生菌菌株号"),
+    (r"ATCC[-\s]*PTA[-\s]*5024|PTA-5024", "本项目产生菌菌株号"),
 ]
 
 
@@ -557,6 +560,13 @@ def _():
         if not any(f"> **级别：{lv}" in head for lv in levels):
             bad.append(f"{d.name}: 级别不在 {levels}")
     assert not bad, "；".join(bad)
+
+    # 篇数上限：政策说"能塞进已有文档的一节，就不新开一篇"——必须真的有人数。
+    # （2026-11-15 前这条只是句口号：文档写了"14 篇是上限"，却没有任何检查在管。）
+    n_docs = len([p for p in (ROOT / "docs").glob("*.md") if p.name != "INDEX.md"])
+    assert n_docs <= 14, (
+        f"docs/ 有 {n_docs} 篇，超过上限 14。政策（docs/generic-policy.md §3）："
+        "能塞进已有文档的一节就不新开一篇——先合并掉一篇，再新增。")
 
 
 @check("通用性：技能内无项目专属药物名/参数（docs/generic-policy.md）")

@@ -32,14 +32,17 @@ markers.csv ─┼→ cmd_multitarget (cli.py:1157)
 
 | 文件 | 行数 | 角色 | 关键入口 |
 |---|---|---|---|
-| `windowcalc/ramp.py` | 600+ | **主引擎**：账本 → 现状 → 规划 | `run_ledger` · `fit_pap` · `plan_ramp` · `washout_tail` (139) · `render_ledger` |
-| `windowcalc/fstep.py` | 55 | 纯算术：比例区间 | `wilson_ci` · `newcombe_diff`（2026-11-15 删掉单步引擎 `run_step`/`render`） |
-| `windowcalc/mtblocks.py` | 162 | 标定积木（B1 / B5 / B6） | `mu_perbp` (66) · `minimal_n0` (95) · `window_table_f_step` (118) |
+| `windowcalc/ramp.py` | 673 | **主引擎**：账本 → 现状 → 规划 | `run_ledger` (356) · `fit_pap` (39) · `plan_ramp` (225) · `washout_tail` (189) · `render_ledger` (532) |
+| `windowcalc/fstep.py` | 55 | 纯算术：比例区间 | `wilson_ci` (23) · `newcombe_diff` (43)（2026-11-15 删掉单步引擎 `run_step`/`render`） |
+| `windowcalc/mtblocks.py` | 170 | 标定积木（B1 / B5 / B6） | `mu_perbp` (66) · `minimal_n0` (95) · `window_table_f_step` (122) |
 | `windowcalc/induction.py` | 301 | 剂量轴机制模型 → `M_on(c)` | `fit_induction` (197) · `psi` (49) |
 | `windowcalc/fitting.py` | 279 | 剂量-响应 Hill、洗脱衰变 | `fit_tau_off` (204) · `hill_fc` (28) |
 | `windowcalc/model.py` | 879 | 窗口引擎（j=1 的 `optimize` 用） | `phase_terms` (261) · `monte_carlo` (754) · `protected_hits` (495) |
 | `windowcalc/optimize.py` | 322 | 三旋钮网格 + MC 选优 | `optimize` (117) |
-| `windowcalc/cli.py` | 1456 | 参数校验、CSV 读入、拼装 | `cmd_multitarget` (1157) |
+| `windowcalc/cli.py` | 1463 | 参数校验、CSV 读入、拼装 | `cmd_multitarget` (1101) |
+
+> 行号是 2026-11-15 校对值，**会随改动漂**。定位不到就 `grep -n "^def 函数名"`；
+> 行数同理（只用来判断文件量级）。
 
 ---
 
@@ -88,14 +91,19 @@ OLS：s = Sxy/Sxx；R²；σ² = SSres/(n−2)；se(s) = √(σ²/Sxx)
 回填账本重跑，拟合残差出 CI → 曲线重拟合或拆档。
 `margin`（默认 3）是冗余系数：预测克隆数 ≥ `margin × k` 才允许开档。
 
-### 2.4 乘客账（三段可加）
+### 2.4 乘客账（**四段**可加）
 
 ```
 M_on = μ_perbp × G                       ← [B1] 过原点回归 μ̂ = Σ(T_i μ_i)/Σ(T_i²)   [文献]
       或 --m-on 直接给（WGS 突变累积测出的 /基因组/代；不要乘第二遍 G）
-每档 = n_win·M_on + n_plate·M_off         ← 窗口段 + 板内扩张段
-总   = 已完成档基数 + 剩余梯级 Σ + n_post·M_off（只计一次）
+
+每档 = n_win·M_on + n_inter·M_off + tail   ← 窗口段 + 档间扩增段 + 洗脱尾
+总   = 已完成档基数 + 剩余梯级 Σ + n_post·M_off + tail（末次洗脱，只计一次）
 ```
+
+⚠ `n_inter` 是**档间扩增代数**，由拓扑算（见下）——**不是**固定的 `n_plate`：
+`manual` 模式下它才等于 `n_plate`；`plate`/`liquid` 下由 `log₂` 算出。
+旧版公式块写 `n_plate·M_off` 是 2026-11-15 之前的说法，已废。
 
 `μ_perbp` 用**过原点回归**而不是平均：`T_eff` 因标记而异，μ 不可直接平均。
 同时输出 `spread = max/min`，>2 说明"每碱基率均匀"这条假设在本菌里不成立。
@@ -105,7 +113,7 @@ M_on = μ_perbp × G                       ← [B1] 过原点回归 μ̂ = Σ(T_
 `log₂(cells_per_colony)`；`liquid` 用 `log₂(N₀/(f·Nt))`，N₀ 缺省取 `Nt − k/f`。
 已完成档按**各自周期的 f** 算（不是一刀切），来源写进报告的"档间扩增"一行。
 
-**第四段：洗脱尾**（2026-11-15 接入）——`washout_tail()`（ramp.py:139）：
+**第 3 段：洗脱尾**（2026-11-15 接入）——`washout_tail()`（ramp.py）：
 
 ```
 tail = (M_on − M_off)/(e^(td/τ_off) − 1)     每次洗脱计一次（档 + 终点后）
@@ -211,7 +219,7 @@ MC：参数 CI → 对数正态 σ（由 CI 反推；无 CI 时按 2× 假设并
 
 ---
 
-## 6. 维护者须知：同一批公式有**两套**实现
+## 6. 维护者须知：同一批公式有**多处**实现（改一处要改三处）
 
 **F 的位置**：`multitarget` 不吃 F——供给是实测 f_step，乘客是 M_on。
 markers 若带 `f` 列，报告会给一条"代价参考（F 只做 QC，不进供给）"，
@@ -219,17 +227,26 @@ markers 若带 `f` 列，报告会给一条"代价参考（F 只做 QC，不进�
 
 | 公式 | 积木版（文档里的"主路径"） | 实跑版（CLI 真正调用） |
 |---|---|---|
-| N₀ = Nt − k/f | `mtblocks.minimal_n0` (95) | 账本第三节设计行 `ramp.py:495` |
-| 乘客 = n·M_on | `mtblocks.window_table_f_step` (118) | `ramp.run_ledger` 的 `base`（409）+ `plan_ramp`（206） |
-| 失守 = 1 − exp(−E·L/G) | 同上（`row["p_bgc"]`） | `plan_ramp:210`（按梯级累计） |
+| N₀ = Nt − k/f | `mtblocks.minimal_n0` (95) | `ramp.inter_rung_generations` (178，传代拓扑用) **+ 账本第三节设计行 `ramp.py:622`（打印给用户）** |
+| 乘客 = n·M_on | `mtblocks.window_table_f_step` (122) | `ramp.run_ledger` 的 `base`（499）+ `plan_ramp` (225) |
+| 失守 = 1 − exp(−E·L/G) | 同上（`row["p_bgc"]`） | `plan_ramp` 的 `p_bgc`（315，按梯级累计） |
 
 **现状** [2026-11-15 核查]：CLI 只用了 `mu_perbp`；`minimal_n0` 与
 `window_table_f_step` 仅被测试调用——它们是**文档积木**，不是实跑路径。
-两套公式现在数值一致，但**不是同一段代码**。
+两者算的是**同一核心**（N₀ 与 `n·M_on`），但积木版是单窗口径、实跑版是四段账，
+不是同一段代码。
 
-⇒ **改公式时两处都要改，并跑 `tests/test_ledger_formula_pin.py`。**
-该测试用变异测试验证过：只改 mtblocks 或只改 ramp，都会立刻红
-（mtblocks 侧 4 项失败、ramp 侧 2 项失败）。
+⚠ **N₀ 公式实际有三处拷贝**（不是两处）：`mtblocks.minimal_n0:95`、
+`ramp.inter_rung_generations:178`（`liquid` 传代的 N₀ 缺省值）、
+`ramp.render_ledger:622`（打印给用户的设计行）。改其中任何一处都要同步另两处。
+
+⇒ **改公式时三处都要改，并跑 `tests/test_ledger_formula_pin.py`。**
+该测试用变异测试验证过（2026-11-15 重新核对）：
+改 `mtblocks.minimal_n0` → **4 项失败**；改 `ramp.inter_rung_generations` 的 N₀ → **1 项失败**；
+改 `ramp.py:622` 的打印行 → **2 项失败**（`test_rendered_n0_design_line_is_correct` 的 2 个参数）。
+
+> 教训：2026-11-15 之前，`ramp.py:622` 这行**零测试覆盖**——它打印给用户，却改坏了也全绿；
+> 而本文档当时还声称"改 ramp 会红 2 项"，属于**未经核实的断言**。补测试后才成立。
 
 ```bash
 python -m pytest tests/test_ledger_formula_pin.py -q     # 对拍

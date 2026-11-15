@@ -64,7 +64,7 @@ python3 run.py power --mode power --mu1 2e-9 --fold 2 --target-power 0.9 --C 40 
 ```bash
 python3 run.py optimize --strain strain_card.yaml --out 报告.md            # 协议卡用内置默认
 python3 run.py optimize --strain strain_card.yaml --protocol my.yaml --out 报告.md
-python3 run.py optimize --strain minimal.yaml --fill-defaults --out 报告.md  # 缺项用默认假设值
+python3 run.py optimize --strain minimal.yaml --fill-defaults --out 报告.md  # 只补 4 项约定量
 ```
 
 样例卡片在技能 `examples/` 与项目目录。**这是专家功能**：strain_card 有 **10 项必填**
@@ -72,7 +72,10 @@ python3 run.py optimize --strain minimal.yaml --fill-defaults --out 报告.md  #
 与协议卡 5 项必填（k / P_min / T 区间 / N₀ 区间）；缺项默认**直接报错**（不会静默替代）。
 只能先用假设值时显式写 `status: assumed`，报告会把它们标成“★未测”——如实转告用户。
 
-**无感用法**：协议卡可省略（用内置默认）；菌株卡缺项可用 `--fill-defaults` 自动补默认假设值（stderr 会列出补了哪些，报告标 ★未测）。**不要让用户手写 YAML**——按 `references/intake.md` 用几个带默认值的问题问齐即可。
+**无感用法**：协议卡可省略（用内置默认）；`--fill-defaults` **只补 4 项与体系无关的量**
+（M_base / M_on_ref / M_off / Nt_saturation，报告标 ★未测）；`mu_supply`、τ_on/τ_off、
+td_on/td_off、`ref_dose_mM` 必须给（内置它们＝把某个体系当通用推荐，政策禁止）。
+**不要让用户手写 YAML**——按 `references/intake.md` 用几个带默认值的问题问齐即可。
 
 ⚠ **μ_supply 是 events 端主参数**：没测就先做波动分析（12 管试点），不要只填默认——它和 `M_base` 的整体 scale 不同，会改变窗口 argmin；默认值下窗口只能当方向参考。
 卡片可写 `mu_supply_source`（这个速率是用哪个标记测的）与 `selection_marker`（窗口用哪个标记筛）；两者不同时 `optimize` 会自动提示外推（见 `references/markers.md`）。
@@ -143,7 +146,52 @@ python3 run.py design-induction --doses 0.1 0.3 1 --c50 0.48           # 用户�
 **绝不要把“C50 是多少”反问给用户**（那正是要帮他测的）。
 ⚠ `--ref-m` 只有在知道 C50 时才有意义：只给 `--ref-m` 不给 C50 会打印警告并忽略它。
 
-## 9. 输出、边界与实测数字
+## 9. multitarget —— 多靶点渐升：账本解释器（唯一路径）
+
+多靶点/耐受类药物**不许**用 μ 外推供给，只有这一条计算路径：读**铺板实测账本** → 算现状 → 规划下一档。
+数学见 `docs/protocol-ramp.md`，实验侧见 `docs/protocol-execution.md`，接入问法见 `references/multitarget-intake.md`。
+
+```bash
+python3 run.py multitarget --records records.csv --markers markers.csv \
+    --genome-mb <Mb> --n-win <每档诱导代数> --k <每档目标克隆数> \
+    --capacity <每档板预算 CFU> --c-target <目标浓度> [--c-start <当前浓度>] \
+    [--m-off <泄漏 M_off>] [--n-post <终点后代数>] [--bgc-kb <保护区 kb>] [--margin 3] \
+    [--propagation manual|plate|liquid] [--n-plate N | --cells-per-colony N | --nt Nt] \
+    [--sat-f 0.5] [--tau-off-h <h> --td <h>] [--json] [--out 报告.md]
+```
+
+**六项必填**：`--records`、`--genome-mb`、`--n-win`、`--k`、`--capacity`、`--c-target`；
+乘客速率二选一：`--markers`（标记链，`M_on = μ_perbp × G`）或 `--m-on`（WGS 直给）。
+**缺任一项一律 `exit 2` 并逐项列清单，不回落默认值**；两支都给、或 `--tau-off-h`/`--td` 只给一支，同样报错。
+
+**账本 schema**（唯一状态文件，逐行追加、永不改写）：
+
+```
+cycle,c,when,cfu,clones      # when = pre|post；cfu 是该浓度那块板的涂板 CFU
+```
+
+**输出五节**：① 各档 `f_step`（pre/post 扣背景 + Wilson/Newcombe 区间）→ ② PAP 现状（尾部 log-线性拟合、δ 与 95%CI、
+饱和点定位、±20% 边界带）→ ③ 下一窗设计（预测 `f_step`、档间扩增代数、`N₀ ≤ Nt − k/f` 行）→
+④ 剩余梯级与累计乘客（四段账：窗口 + 档间扩增 + 洗脱尾 + 终点后）→ ⑤ 怎么读。
+
+**阶段诊断（不是干等数据）**：
+
+| 你手里有什么 | 命令给什么 |
+|---|---|
+| 没有账本 | `S0/S1` 剧本：测 MIC → 基线梯度 → 定 c₁ → 首窗 → 首档 7 块板（`exit 2`） |
+| 有账本但尾部浓度点 <2 | `S2`：回上一档洗后悬液补 2×/4× 两块板（`exit 2`） |
+| 有账本、≥2 个尾部点 | 正常出五节报告 |
+
+**几条硬口径**：
+
+- 供给只来自实测 `f_step`；`M_on` 只进乘客预算。**F 不做 QC 以外的任何事**，更不做窗口计算；
+- `--propagation` 决定档间代数由谁算：`manual` 用 `--n-plate`、`plate` 用 `log₂(cells_per_colony)`、
+  `liquid` 用 `log₂(N₀/(f·Nt))`（N₀ 缺省 `Nt − k/f`，`--n0` 可覆盖）——**参数不够直接报错**；
+- 洗脱尾 `(M_on−M_off)/(e^(td/τ)−1)` 每次洗脱计一次；不给 `--tau-off-h`+`--td` 则不计并在报告里注明；
+- 饱和阈值 `--sat-f`（默认 0.5）决定哪些点进尾部拟合：`f_post ≥ sat_f` 视为"长到与未处理相当"，
+  阈值 ±20% 内的点会被单独标出（分类对阈值敏感，别只看一个数）。
+
+## 10. 输出、边界与实测数字
 
 - **部分涂板**只用 `--fraction-plated ζ`（二项稀释似然；Nt 填**整管总 CFU**），禁止手工 r/ζ——
   稀释会抬高零管比例，除以 ζ 补不回来：本机复跑 ζ=0.5/0.3/0.1 偏低 21%/39%/72%（winsor 时 13/30/68%）

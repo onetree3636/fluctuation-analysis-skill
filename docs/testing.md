@@ -195,7 +195,7 @@ Excel 另存的 GBK CSV 能读（`_read_text` 回退）。
 | 8 | `--conf-level 0` = 1σ；m=1 需 36 管 | 同上 | ✅ 36 管 |
 | 9 | `--field` 只认规范名，旧名报错 | `--field M_WT` | ✅ 报“未知字段”，列可选值 |
 | 10 | `fit-fc` 只认 `--mu-base` | `--mu-wt` | ✅ 报缺少 `--mu-base` |
-| 11 | `optimize --protocol` 可省略；`--fill-defaults` 补缺项 | 最小卡 | ✅ 用内置协议卡；stderr 列出补了 10 项 |
+| 11 | `optimize --protocol` 可省略；`--fill-defaults` 只补 4 项约定量 | 最小卡 | ✅ 用内置协议卡；6 项实测物理量仍报错并点名 |
 | 12 | 菌株卡缺必填项直接报错（不静默默认） | 空卡 | ✅ 列缺失项 |
 | 13 | `M_* < 1e-5` 提示“像单位点速率” | M_base=2.1e-9 | ✅ stderr 给 10³–10⁶ 倍说明 |
 | 14 | `M_off > 3×M_base` 红灯 | M_off=0.02 | ⚠️ 只在有可行方案时出现在报告 §6；无可行解时只给瓶颈诊断（不误报） |

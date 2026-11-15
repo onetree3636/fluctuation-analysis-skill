@@ -386,8 +386,10 @@ def _require(d: dict, required: dict, what: str) -> None:
             + "\n\n你有三个选择："
               "\n  A) 实测（推荐）：测法见 docs/experiment-design.md；"
               "测好后把该项写成 `status: measured`"
-              "\n  B) 先用默认值跑一版：加 --fill-defaults。报告会把这些项标成 ★未测，"
-              "结论只能当方向参考——默认值与实测可能差一个数量级，窗口位置会随之明显移动"
+              "\n  B) 先跑一版：加 --fill-defaults 只补**与体系无关**的 4 项"
+              "（M_base / M_on_ref / M_off / Nt_saturation，报告标 ★未测）；"
+              "mu_supply、τ、td、参考剂量这 6 项是**你体系的实测物理量**，"
+              "它不会替你编——缺就仍报错"
               "\n  C) 复制模板：examples/strain_card.example.yaml（或 protocol_card.example.yaml），"
               "逐项替换"
               "\n\n没测的字段也可以先写 `status: assumed` 再跑（报告同样标 ★未测）。"
@@ -473,13 +475,18 @@ def _load_protected(d, path: str = "") -> list:
     return out
 
 
-#: --fill-defaults 用：菌株卡缺的必填项 → 默认假设值（全部 status: assumed，报告标 ★未测）
+#: --fill-defaults 只补「与你的体系无关」的三类量（见 docs/generic-policy.md 规则二）：
+#:   ① 文献量级：M_base ≈ Drake 定律（细菌 ~3×10⁻³ /基因组/代，本处取 4×10⁻³ 上沿）；
+#:   ② 由 M_base 按约定推出的比值：M_on_ref = 100×M_base（全开档）、M_off = 3×M_base（泄漏红线）；
+#:   ③ 涂板口径的饱和密度量级（3×10⁸ CFU/管 ≈ 大肠杆菌过夜培养；**按你的体系改**）。
+#: 其余六项（mu_supply / tau_on_h / tau_off_h / td_h_on / td_h_off / ref_dose_mM）
+#: 是**你体系的实测物理量**，不做默认值——缺就报错，缺什么列什么。
 _DEFAULT_CARD = {
-    "M_base": 0.004, "M_on_ref": 0.4, "M_off": 0.012, "mu_supply": 2.0e-8,
-    "tau_on_h": 2.0, "tau_off_h": 4.0,
-    "td_h_on": 2.5, "td_h_off": 2.0,
-    "Nt_saturation": 3.0e8, "ref_dose_mM": 0.3,
+    "M_base": 0.004, "M_on_ref": 0.4, "M_off": 0.012, "Nt_saturation": 3.0e8,
 }
+#: --fill-defaults **不会**替你编的项（要实测 / 要你给）
+_MEASURED_ONLY = ("mu_supply", "tau_on_h", "tau_off_h",
+                  "td_h_on", "td_h_off", "ref_dose_mM")
 
 
 def load_strain_card(path: str, fill_defaults: bool = False) -> StrainCard:
@@ -494,6 +501,11 @@ def load_strain_card(path: str, fill_defaults: bool = False) -> StrainCard:
         if filled:
             print("警告：菌株卡缺少 " + "、".join(filled)
                   + "——已用默认假设值填充（报告会标 ★未测）；有实测值请替换。",
+                  file=sys.stderr)
+        still = [k for k in _MEASURED_ONLY if d.get(k) is None]
+        if still:
+            print("注意：--fill-defaults **不会**替你编这几项（它们是你体系的实测物理量）："
+                  + "、".join(still) + "——请实测或显式写 {value, status: assumed}。",
                   file=sys.stderr)
     _require(d, _REQUIRED_STRAIN, f"{path}（菌株卡）")
     ind = d.get("inducer")
@@ -1157,13 +1169,18 @@ def cmd_multitarget(args) -> int:
 
     records = []
     with open(args.records, newline="", encoding="utf-8-sig") as f:
-        rdr = _csv.DictReader(f)
+        # 账本允许以 # 开头的数据说明行（出处/合成标注），跳过它们不影响表头识别
+        all_lines = list(f)
+        rows_txt = [ln for ln in all_lines
+                    if ln.strip() and not ln.lstrip().startswith("#")]
+        n_skip = len(all_lines) - len(rows_txt)
+        rdr = _csv.DictReader(rows_txt)
         need_cols = {"cycle", "c", "when", "cfu", "clones"}
         if not need_cols.issubset({(c or "").strip() for c in (rdr.fieldnames or [])}):
             raise ValueError(
                 f"{args.records} 表头需含 cycle,c,when,cfu,clones"
                 f"（模板：examples/records_template.csv）；实际是 {rdr.fieldnames}")
-        for i, row in enumerate(rdr, start=2):
+        for i, row in enumerate(rdr, start=2 + n_skip):
             when = (row.get("when") or "").strip().lower()
             if when not in ("pre", "post"):
                 raise ValueError(
@@ -1241,7 +1258,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap_opt.add_argument("--protocol", default=None,
                         help="protocol_card YAML；缺省用技能自带的默认协议卡（只问 k/成功率/上限即可）")
     ap_opt.add_argument("--fill-defaults", action="store_true",
-                        help="菌株卡缺的必填项用默认假设值填充（报告标 ★未测）；有实测值请替换")
+                        help="只补与体系无关的 4 项（M_base/M_on_ref/M_off/Nt_saturation）；"
+                             "mu_supply/τ/td/参考剂量必须自己给（政策禁止内置项目实测值）")
     ap_opt.add_argument("--out", default=None, help="输出 Markdown 路径（缺省打印）")
     ap_opt.add_argument("--mc-samples", type=int, default=None)
     ap_opt.set_defaults(func=cmd_optimize)

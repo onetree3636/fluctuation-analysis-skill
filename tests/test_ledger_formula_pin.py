@@ -52,7 +52,7 @@ def _records_one_cycle() -> list[tuple[str, float, str, float, int]]:
     (1e-5, 50.0, 5e8),
 ])
 def test_minimal_n0_matches_ledger_n0_row(f, k, nt):
-    """账本第三节的 N₀ 设计行写的是 `Nt − k/f`——必须与 minimal_n0 完全一致。"""
+    """`minimal_n0` 必须等于解析式 `Nt − k/f`（积木版自身自洽）。"""
     r = minimal_n0(f, k, nt)
     assert r["feasible"]
     assert r["n0"] == pytest.approx(nt - k / f, rel=1e-12)
@@ -60,6 +60,33 @@ def test_minimal_n0_matches_ledger_n0_row(f, k, nt):
     assert r["n_gen"] == pytest.approx(math.log2(nt / r["n0"]), rel=1e-12)
     # 供给回头：rate × (Nt − N0) 必须刚好等于 k（取等号）
     assert r["events"] == pytest.approx(k, rel=1e-12)
+
+
+@pytest.mark.parametrize("f,k,nt", [
+    (1e-6, 12.0, 1e9),
+    (1e-5, 50.0, 5e8),
+])
+def test_rendered_n0_design_line_is_correct(f, k, nt):
+    """**实跑路径**的 N₀ 设计行（`render_ledger`）必须与解析式一致。
+
+    2026-11-15 补：此前这一行只有 `minimal_n0` 一侧被断言，而真正打印给用户的
+    `ramp.render_ledger` 那行**零测试覆盖**——改坏了 19 项 pin + 55 项其余测试全绿
+    （见 docs/multitarget-code-map.md §6 的变异测试记录）。
+    """
+    from windowcalc.ramp import render_ledger
+
+    plan = run_ledger(_records_one_cycle(), m_on=0.1, m_off=0.01,
+                      genome_mb=GENOME_MB, n_win=4.0, n_plate=0.0, n_post=0.0,
+                      k=k, capacity=1e9, c_target=6.0, bgc_kb=None, margin=3.0,
+                      c_start=1.0, nt=nt)
+    out = render_ledger(plan)
+    # 该行用的是"尾部里最大的 f"（升档用），本账本里 = 1e-6
+    r1_f = plan["ladder"][0]["f_step"] if plan["status"] == "可行" else f
+    expect = nt - k / r1_f
+    assert f"N₀ ≤ Nt_sat − k/f_step" in out, "报告少了 N₀ 设计行"
+    assert f"= {expect:.3g}（" in out, (
+        f"N₀ 设计行算错：应出现 '= {expect:.3g}（'；实际报告片段：\n"
+        + "\n".join(ln for ln in out.splitlines() if "N₀" in ln))
 
 
 def test_minimal_n0_generations_are_consistent_with_divisions():
