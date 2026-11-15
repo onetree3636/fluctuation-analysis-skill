@@ -131,8 +131,8 @@ python3 run.py multitarget --mode fit --input 三档.csv
 
 ## 下一步读什么
 
-- 想知道**为什么**：`docs/multitarget-model.md`（有公式，进阶）
-- 想知道**证据从哪来**：`docs/resistance-evidence-tiers.md`
-- 只想知道**这药算哪类**：`docs/multitarget-extrapolation.md`
-- 手上有**一个单位点的 μ**，想换算成"每代每个基因组多少突变"（算乘客预算要用）：`docs/mu-genome-derivation.md`
+- 想知道**为什么**：`docs/multitarget-model.md`（有公式，进阶；§9 分类轴、§10 证据分级）
+- 想知道**证据从哪来**：`docs/multitarget-model.md` §10
+- 只想知道**这药算哪类**：`docs/multitarget-model.md`
+- 手上有**一个单位点的 μ**，想换算成"每代每个基因组多少突变"（算乘客预算要用）：`docs/knowledge-base.md`
 - 完全没看懂：`docs/start-here.md`

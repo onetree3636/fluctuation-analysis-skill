@@ -1,7 +1,8 @@
 # 文档索引——先看这一页
 
-> 19 篇文档不是 19 个入口。**入口只有这里。**
+> 14 篇文档不是 14 个入口。**入口只有这里。**
 > 每篇文档开头都有一行「级别 / 什么时候读我 / 不用读我」，按那行判断要不要继续看。
+> （2026-11-15 做过一次合并：5 篇并入同主题文档，标题与公式一条未删。）
 
 ---
 
@@ -11,18 +12,18 @@
 |---|---|
 | **手上有 r/Nt 计数表，要算突变率** | `tutorial.md` → 需要原理再看 `knowledge-base.md` |
 | **要设计一次波动实验（多少管、几个剂量）** | `experiment-design.md` |
-| **计数不对劲（回收低、成团、对不上）** | `viable-count-problems.md` |
+| **计数不对劲（回收低、成团、对不上）** | `knowledge-base.md` §8 |
 | **要开 mutator 拿耐受克隆（单步）** | `start-here.md` → `mutator-window.md`（原理）→ 跑 `optimize` |
 | **要多靶点渐升（j≥2）** | `start-here.md` → `protocol-ramp.md`（排阶梯）→ `protocol-execution.md`（怎么走一个周期） |
 | **要测 f_step（配对铺板）** | `protocol-fstep.md` |
-| **某个药能不能外推到另一个药** | `multitarget-extrapolation.md` → `resistance-evidence-tiers.md` |
-| **单位点 μ 怎么换成全基因组 M** | `mu-genome-derivation.md` |
+| **某个药能不能外推到另一个药** | `multitarget-model.md` §9（分类轴）→ §10（证据分级） |
+| **单位点 μ 怎么换成全基因组 M** | `knowledge-base.md` §7 |
 | **术语看不懂** | `glossary.md` |
 | **我要改代码 / 审模型 / 加内容** | `multitarget-code-map.md` → `generic-policy.md` → `testing.md` |
 
 ---
 
-## 二、级别一览（三档）
+## 二、级别一览（14 篇）
 
 ### 必读（3 篇）
 
@@ -37,21 +38,19 @@
 `start-here.md`（多靶点 5 分钟判断）· `experiment-design.md`（实验设计）·
 `protocol-fstep.md`（测 f_step）· `protocol-ramp.md`（排阶梯与乘客账）
 
-### 附录（12 篇）
+### 附录（7 篇）
 
-原理：`knowledge-base.md` · `mutator-window.md` · `multitarget-model.md` · `mu-genome-derivation.md`
-判断：`multitarget-extrapolation.md` · `resistance-evidence-tiers.md`
-诊断：`viable-count-problems.md`
-工具书：`glossary.md`
-概念演示（命令已撤，只读概念）：`multitarget-tutorial.md`
-维护者：`generic-policy.md` · `testing.md`
-历史：`software_audit_2026-10-30.md`
+- **原理/背景**：`knowledge-base.md`（含 §7 μ→M 换算、§8 计数诊断）·
+  `multitarget-model.md`（含 §9 分类轴、§10 证据分级）· `mutator-window.md`
+- **工具书**：`glossary.md`
+- **概念演示**（命令已撤，只读概念）：`multitarget-tutorial.md`
+- **维护者**：`generic-policy.md` · `testing.md`（含 §9 2026-10-30 的历史核对）
 
 ---
 
 ## 三、两条纪律（写文档前先读）
 
-1. **能塞进已有文档的一节，就不新开一篇。** 19 篇已是上限。
+1. **能塞进已有文档的一节，就不新开一篇。** 14 篇是上限（2026-11-15 由 19 篇合并而来）。
 2. **新增/改动前先问三句**：它让哪一次实验决策更省或更准？没有它用户会犯什么具体错？
    能不能放进已有文档？——答不上就别加（详见 `generic-policy.md` §5）。
 

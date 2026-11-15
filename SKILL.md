@@ -141,17 +141,16 @@ mutator 会改道（pbio.3001878）——单步效应按实测走，文献只定
 
 ## 细节在哪
 
-**入口只有一个：`docs/INDEX.md`**——19 篇文档按"我现在要干什么"路由；
+**入口只有一个：`docs/INDEX.md`**——14 篇文档按"我现在要干什么"路由；
 每篇开头都有一行「级别 ｜ 什么时候读我 ｜ 不用读我」，按那行判断要不要继续看。
 
 - **必读 3 篇**：`docs/tutorial.md`（算突变率）· `docs/protocol-execution.md`（走一个浓度周期）·
   `docs/multitarget-code-map.md`（维护者：改公式/审代码 → 改一处要改两处）
 - **主路径 4 篇**：`docs/start-here.md`（多靶点 5 分钟判断）· `docs/experiment-design.md`（设计波动实验）·
   `docs/protocol-fstep.md`（测 f_step）· `docs/protocol-ramp.md`（排阶梯与乘客账）
-- **附录 12 篇**：原理（knowledge-base / mutator-window / multitarget-model / mu-genome-derivation）、
-  判断（multitarget-extrapolation / resistance-evidence-tiers）、诊断（viable-count-problems）、
-  工具书（glossary）、概念演示（multitarget-tutorial，**命令已撤**）、维护者（generic-policy / testing）、
-  历史（software_audit_2026-10-30）
+- **附录 7 篇**：`knowledge-base.md`（含 §7 μ→M 换算、§8 计数诊断）·
+  `multitarget-model.md`（含 §9 分类轴、§10 证据分级）· `mutator-window.md` · `glossary.md` ·
+  `multitarget-tutorial.md`（**命令已撤，只读概念**）· `generic-policy.md` · `testing.md`（含历史核对）
 - `docs/figures/`：三张符号化配图（**不含任何数值**，生成脚本同目录、可复现）——
   周期结构 / 两种传代拓扑 / 两个决策。用户问"一个浓度周期长什么样"时，展示
   `figures/cycle-liquid-propagation.png` 并按 `protocol-execution.md` 解读。

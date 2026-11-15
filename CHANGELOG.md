@@ -2,6 +2,26 @@
 
 ## 未发布（工作区，2026-11-14 起）
 
+### Changed（2026-11-15，文档合并：19 → 14 篇）
+
+按主题合并 5 篇，**标题、公式、结论一条未删**（并入后逐篇核对：标题 100%、公式/数值行 100%）：
+
+| 原文件 | 并入 | 位置 |
+|---|---|---|
+| `multitarget-extrapolation.md` | `multitarget-model.md` | §9 分类轴 |
+| `resistance-evidence-tiers.md` | `multitarget-model.md` | §10 证据分级 |
+| `mu-genome-derivation.md` | `knowledge-base.md` | §7 μ→M 换算 |
+| `viable-count-problems.md` | `knowledge-base.md` | §8 计数诊断 |
+| `software_audit_2026-10-30.md` | `testing.md` | §9 历史核对 |
+
+- 合并方式：源文档**整篇**挂在目标的新 H2 下、标题降一级，正文逐字保留；每段开头注明
+  "2026-11-15 由 `X.md` 整篇并入，内容未删"。
+- 目标文档的标题与分级横幅同步（`multitarget-model.md` → "数学模型、分类轴与证据分级"；
+  `knowledge-base.md` → "含 μ→M 换算与计数诊断"）。
+- 全仓引用改写（README / SKILL / INDEX / 各文档 / references），指向合并后的新位置与小节号。
+- `INDEX.md` 重写：路由表按"我要干什么"给到小节（如"计数不对劲 → knowledge-base §8"），
+  分级改为必读 3 / 主路径 4 / 附录 7。
+
 ### Changed（2026-11-15，文档减法）
 
 - **新增 `docs/INDEX.md`：文档的唯一入口**。19 篇文档按"我现在要干什么"路由

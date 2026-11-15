@@ -90,7 +90,7 @@ min E[P] s.t. P(≥k) ≥ 0.95，蒙特卡洛传播 CI 与克隆间离散（gkab
 - **诚实简化**：丝状菌"每代"按 per CFU per passage 口径；表达负担以 td_on−td_off 进代数；
   谱偏（PHP 缺陷产 indel，Rif 板测不到）不在模型内——用先导 WGS 对账校准 M_on。
 - **多靶点路线**：供给只认实测 f_step（一次性吸收靶点个数×长度×有益比例）；
-  μ_perbp 只进乘客支路（`docs/mu-genome-derivation.md`），不用于供给外推。
+  μ_perbp 只进乘客支路（`docs/knowledge-base.md`），不用于供给外推。
 
 ## 文档地图
 
@@ -99,9 +99,9 @@ min E[P] s.t. P(≥k) ≥ 0.95，蒙特卡洛传播 CI 与克隆间离散（gkab
 | **不知道读哪篇** | **`docs/INDEX.md`（唯一入口：按"我现在要干什么"路由，每篇开头有级别与"何时读我"）** |
 | 设计波动实验 / 测参数 | `docs/experiment-design.md` |
 | 理解窗口模型 | `docs/mutator-window.md` |
-| 多靶点/膜活性药 | `docs/multitarget-model.md`（模型）· `docs/multitarget-extrapolation.md`（分类轴）· `docs/protocol-fstep.md`（f_step 铺板规程）· `docs/protocol-ramp.md`（阶梯规划） |
+| 多靶点/膜活性药 | `docs/multitarget-model.md`（模型 + §9 分类轴 + §10 证据分级）· `docs/protocol-fstep.md`（f_step 铺板规程）· `docs/protocol-ramp.md`（阶梯规划） |
 | 一个浓度周期怎么操作（涂多少 / 剩的去哪 / 板还是液传代 / 能不能不等板） | `docs/protocol-execution.md` |
-| 单位点 μ → 全基因组 M 换算 | `docs/mu-genome-derivation.md` |
+| 单位点 μ → 全基因组 M 换算 · 计数诊断 | `docs/knowledge-base.md` §7 / §8 |
 | 验证、golden 对拍、已知差距 | `docs/testing.md` |
 | 术语与口径 | `docs/glossary.md` |
 | agent 用法与领域护栏 | `SKILL.md` · `references/`（intake / guardrails / markers / commands） |

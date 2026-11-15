@@ -89,7 +89,7 @@ f_step 编不出来——它是**这次实验**的实测值。
 |---|---|---|
 | 标记计数表 `r, Nt` | `rate` | `multitarget --f-step …` |
 | WT/mutator 两批 | `compare`（F，仅 QC/代价） | `multitarget --f-step …` |
-| 耐药克隆的 WGS | — | 数乘客 → 校准 M（`docs/mu-genome-derivation.md`） |
+| 耐药克隆的 WGS | — | 数乘客 → 校准 M（`docs/knowledge-base.md`） |
 
 ---
 
