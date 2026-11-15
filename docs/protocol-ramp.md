@@ -280,12 +280,14 @@ P_失守 = 1 − Πᵢ exp(−Pᵢ × ℓ) = 1 − exp(−E[P_总] × ℓ)，   
 PAP 现状（平稳性审计）→ 下一窗设计 → 剩余梯级与累计账。
 
 ```
+# 乘客速率二选一：--markers（标记链）或 --m-on（WGS 直给）
 python3 run.py multitarget --records records.csv --markers markers.csv \
     --genome-mb <Mb> --n-win <窗口代数> --n-plate <板内代数> --m-off <泄漏 M_off> \
     --n-post <终点后代数> --k <目标克隆数> --capacity <板预算> --c-target <目标浓度> \
     --bgc-kb <要保护的 kb> \
     --tau-off-h <τ_off h> --td <倍增 h>          # 同时给才计洗脱尾
     # 可选：--sat-f <饱和阈值，默认 0.5>       # f_post ≥ 该值不进尾部拟合
+    # 可选：--m-on <M_on>                      # 跳过标记链，直接给 /基因组/代
     # 可选：--propagation {manual,plate,liquid}  # 档间代数由拓扑自己算：
     #        plate 要 --cells-per-colony；liquid 要 --nt（--n0 可覆盖）
 ```

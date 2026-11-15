@@ -591,6 +591,10 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
 def render_ledger(plan: dict) -> str:
     L: list[str] = []
     cyc_tb = plan["cycle_table"]
+    if plan.get("m_on_source") is not None:
+        L.append(f"乘客速率 M_on = {plan.get('m_on', float('nan')):.3g} /基因组/代"
+                 f"（{plan['m_on_source']}）")
+        L.append("")
     L.append("一、各档 f_step（账本 records）")
     cur = None
     for e in cyc_tb:
@@ -696,6 +700,10 @@ def render_ledger(plan: dict) -> str:
     if not plan["m_off_counted"]:
         L.append("  ⚠ 未给 --m-off：窗口外段（板内扩张/终点后）**未计入**——"
                  "板内扩张可与窗口同量级，务必补测")
+    for _name, _fv in plan.get("f_notes") or []:
+        from .mtblocks import f_ceiling_note
+        L.append(f"  代价参考（F 只做 QC/表述，**不进供给**）：{_name} F={_fv:g}× → "
+                 f"{f_ceiling_note(_fv)}")
     L.append("")
     L.append("五、怎么读")
     L.append("  - 预测锚在 PAP 实测曲线上；平稳补充假设的审计就是本报告第二节——")

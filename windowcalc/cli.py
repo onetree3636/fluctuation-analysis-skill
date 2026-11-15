@@ -1161,7 +1161,7 @@ def cmd_multitarget(args) -> int:
     from .mtblocks import mu_perbp
     from .ramp import render_ledger, run_ledger
 
-    need = [("--records", args.records), ("--markers", args.markers),
+    need = [("--records", args.records),
             ("--genome-mb", args.genome_mb), ("--n-win", args.n_win),
             ("--k", args.k), ("--capacity", args.capacity),
             ("--c-target", args.c_target)]
@@ -1172,6 +1172,7 @@ def cmd_multitarget(args) -> int:
             "  --records    CSV：cycle,c,when,cfu,clones（when=pre/post；"
             "账本=唯一状态文件，逐行累积永不改写；模板 examples/records_template.csv）\n"
             "  --markers    标定标记 CSV（marker,mu,teff_bp；μ 用 `rate` 的输出）\n"
+            "  --m-on       或者直接给全基因组 M_on（/基因组/代），与 --markers 二选一\n"
             "  --genome-mb  基因组大小 Mb\n"
             "  --n-win      每档诱导窗口的分裂代数\n"
             "  --k          每档目标克隆数\n"
@@ -1182,9 +1183,30 @@ def cmd_multitarget(args) -> int:
             "        --margin（默认 3.0）、--c-start（覆盖当前位置）\n"
             "**如果你是 agent**：请把这段原样呈现给用户并等待明确同意，"
             "不要自行编造这些值。")
-    markers = _read_markers_csv(args.markers)
-    cal = mu_perbp(markers)
-    m_on = cal["mu_perbp"] * args.genome_mb * 1e6
+    if args.markers and args.m_on is not None:
+        raise ValueError(
+            "--markers 与 --m-on 只能给一个：\n"
+            "  --markers 走标记链（M_on = μ_perbp × G，用单靶点标记的 μ）\n"
+            "  --m-on    直接给全基因组速率（WGS 突变累积测出的值）——不要再乘一遍 G")
+    if not args.markers and args.m_on is None:
+        raise ValueError(
+            "缺乘客速率来源：给 --markers（标记链，需要单靶点标记的 μ）\n"
+            "或 --m-on（直接给 M_on，/基因组/代，如 WGS 突变累积的结果）")
+    if args.m_on is not None and not (args.m_on > 0):
+        raise ValueError(f"--m-on={args.m_on!r} 必须 > 0（单位：/基因组/代）")
+
+    f_notes: list[tuple[str, float]] = []
+    if args.markers:
+        markers = _read_markers_csv(args.markers)
+        cal = mu_perbp(markers)
+        m_on = cal["mu_perbp"] * args.genome_mb * 1e6
+        m_on_source = (f"标记链：μ_perbp={cal['mu_perbp']:.3g}/bp/代 × "
+                       f"G={args.genome_mb:g} Mb = {m_on:.3g}")
+        f_notes = [(m.name, m.f) for m in markers if m.f]
+    else:
+        cal = None
+        m_on = float(args.m_on)
+        m_on_source = f"直接给定 --m-on = {m_on:.3g}（/基因组/代）"
 
     records = []
     with open(args.records, newline="", encoding="utf-8-sig") as f:
@@ -1219,6 +1241,8 @@ def cmd_multitarget(args) -> int:
                       cells_per_colony=args.cells_per_colony, n0=args.n0)
     plan["version"] = __version__
     plan["calibration"] = cal
+    plan["m_on_source"] = m_on_source
+    plan["f_notes"] = f_notes
     text = render_ledger(plan)
     if args.json:
         text = _json.dumps(plan, ensure_ascii=False, indent=2, default=str)
@@ -1379,7 +1403,10 @@ def build_parser() -> argparse.ArgumentParser:
                             "模板 examples/records_template.csv）")
     ap_mt.add_argument("--markers", default=None,
                        help="标定标记 CSV（marker,mu,teff_bp；μ 用 `rate` 的输出，"
-                            "只用于乘客 M_on = μ_perbp × G）")
+                            "只用于乘客 M_on = μ_perbp × G）。与 --m-on 二选一")
+    ap_mt.add_argument("--m-on", type=float, default=None,
+                       help="直接给全基因组乘客速率 M_on（/基因组/代），跳过标记链；"
+                            "与 --markers 二选一（WGS 突变累积测出的 M_on 走这里）")
     ap_mt.add_argument("--genome-mb", type=float, default=None,
                        help="基因组大小 Mb")
     ap_mt.add_argument("--n-win", type=float, default=None,

@@ -150,6 +150,60 @@ def test_render_contains_sections_and_numbers():
         assert key in out or key.replace(".92", "") in out
 
 
+def _mt_args(tmp_path, **over):
+    """构造 cmd_multitarget 的 Namespace（默认值全部显式，便于逐个覆盖）。"""
+    rec = tmp_path / "records.csv"
+    rec.write_text("cycle,c,when,cfu,clones\n"
+                   "1,1,post,1.0e9,800000000\n1,2,post,1.0e9,1000\n1,3,post,1.0e9,100\n",
+                   encoding="utf-8")
+    base = dict(records=str(rec), markers=None, m_on=0.2,
+                genome_mb=5.0, m_off=0.01, n_win=4.0, n_plate=0.0, n_post=0.0,
+                k=30.0, capacity=3e8, c_target=5.0, bgc_kb=None, margin=3.0,
+                c_start=None, nt=None, sat_f=0.5, tau_off_h=None, td=None,
+                propagation="manual", cells_per_colony=None, n0=None,
+                json=False, out=None)
+    base.update(over)
+    return argparse.Namespace(**base)
+
+
+def test_cli_m_on_direct_input(tmp_path, capsys):
+    """--m-on 直给：跳过标记链，报告写明来源。"""
+    from windowcalc.cli import cmd_multitarget
+    assert cmd_multitarget(_mt_args(tmp_path)) == 0
+    out = capsys.readouterr().out
+    assert "M_on = 0.2" in out and "直接给定" in out
+
+
+def test_cli_m_on_and_markers_are_exclusive(tmp_path):
+    from windowcalc.cli import cmd_multitarget
+    mk = tmp_path / "mk.csv"
+    mk.write_text("marker,mu,teff_bp\nmarkerA,1.0e-7,10\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="只能给一个"):
+        cmd_multitarget(_mt_args(tmp_path, markers=str(mk), m_on=0.2))
+
+
+def test_cli_needs_some_m_on_source(tmp_path):
+    from windowcalc.cli import cmd_multitarget
+    with pytest.raises(ValueError, match="缺乘客速率来源"):
+        cmd_multitarget(_mt_args(tmp_path, m_on=None))
+
+
+def test_cli_rejects_nonpositive_m_on(tmp_path):
+    from windowcalc.cli import cmd_multitarget
+    with pytest.raises(ValueError, match="--m-on"):
+        cmd_multitarget(_mt_args(tmp_path, m_on=-1.0))
+
+
+def test_cli_prints_f_cost_note_from_markers(tmp_path, capsys):
+    """markers 带 f 列时，报告给一条代价提示（F 只做 QC，不进供给）。"""
+    from windowcalc.cli import cmd_multitarget
+    mk = tmp_path / "mk.csv"
+    mk.write_text("marker,mu,teff_bp,f\nmarkerA,1.0e-7,10,30\n", encoding="utf-8")
+    assert cmd_multitarget(_mt_args(tmp_path, markers=str(mk), m_on=None)) == 0
+    out = capsys.readouterr().out
+    assert "代价参考" in out and "不进供给" in out and "30" in out
+
+
 def test_cli_smoke(tmp_path, capsys):
     pap = tmp_path / "records.csv"
     pap.write_text("cycle,c,when,cfu,clones\n"
@@ -160,7 +214,7 @@ def test_cli_smoke(tmp_path, capsys):
     mk.write_text("marker,mu,teff_bp\nmarkerA,1.0e-7,10\n", encoding="utf-8")
     from windowcalc.cli import cmd_multitarget
     args = argparse.Namespace(
-        records=str(pap), markers=str(mk), genome_mb=5.0, m_off=0.01,
+        records=str(pap), markers=str(mk), m_on=None, genome_mb=5.0, m_off=0.01,
         n_win=4.0, n_plate=12.0, n_post=4.0, k=30.0, capacity=3e8,
         c_target=5.0, bgc_kb=40.0, margin=3.0, c_start=None, nt=None,
         sat_f=0.5, tau_off_h=None, td=None,
@@ -176,7 +230,7 @@ def test_cli_refusal_lists_missing(tmp_path):
     mk = tmp_path / "mk.csv"
     mk.write_text("marker,mu,teff_bp\nmarkerA,1.0e-7,10\n", encoding="utf-8")
     from windowcalc.cli import cmd_multitarget
-    args = argparse.Namespace(records=None, markers=str(mk), genome_mb=None,
+    args = argparse.Namespace(records=None, markers=str(mk), m_on=None, genome_mb=None,
                               m_off=None, n_win=None, n_plate=0.0, n_post=0.0,
                               sat_f=0.5, tau_off_h=None, td=None,
                               propagation="manual", cells_per_colony=None, n0=None,

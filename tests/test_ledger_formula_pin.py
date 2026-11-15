@@ -306,7 +306,7 @@ def test_cli_liquid_mode_without_nt_refuses():
     import argparse
     args = argparse.Namespace(
         records=str(_TMP_RECORDS_PATH()), markers=str(_TMP_MARKERS_PATH()),
-        genome_mb=GENOME_MB, m_off=0.01, n_win=4.0, n_plate=0.0, n_post=0.0,
+        m_on=None, genome_mb=GENOME_MB, m_off=0.01, n_win=4.0, n_plate=0.0, n_post=0.0,
         k=K, capacity=1.0e9, c_target=10.0, bgc_kb=None, margin=3.0,
         c_start=None, nt=None, sat_f=0.5, tau_off_h=None, td=None,
         propagation="liquid", cells_per_colony=None, n0=None,
