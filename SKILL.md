@@ -62,6 +62,7 @@ allowed-tools: Bash Read Write Edit Glob Grep
 | 概念 / 原理 / 设计逻辑 / 选估计器 | 读 `docs/knowledge-base.md` 后回答（开篇有定义与“七个为什么”） | 该文档 |
 | 用一种标记测速、想外推到另一种 | 先读 `references/markers.md`，走 4 问检查清单；**不得直接把 μ_X 填成 μ_supply** | 该文档 |
 | **多靶点/膜活性药：渐升怎么规划、乘客多少** | **先过 j 三问**（表后）→ 按 `references/multitarget-intake.md` 问齐实测值（**PAP 板 / 标定标记 / k·capacity·Nt**）→ `multitarget --records …`；先过 `references/multitarget-guardrails.md` | `docs/protocol-ramp.md` |
+| **多靶点：试管与平板之间怎么倒（涂多少 / 剩的去哪 / 板还是液传代 / 能不能不等板）** | 按 `docs/protocol-execution.md` 的决策树给：涂板比例由克隆数反算、剩余五去处、拓扑二选一、并行四条护栏 | `docs/protocol-execution.md` |
 
 
 ### j 三问——任何窗口设计前必过（决定实验形状）
@@ -138,6 +139,7 @@ mutator 会改道（pbio.3001878）——单步效应按实测走，文献只定
 - `docs/experiment-design.md`、`docs/mutator-window.md`、`docs/knowledge-base.md`、`docs/tutorial.md`、`docs/glossary.md`。
 - `docs/viable-count-problems.md`：活菌计数不准（随机误差/低回收/团块/VBNC/超范围）的诊断与校正/替代计数。
 - `docs/protocol-fstep.md`：**f_step 铺板规程**（配对设计、板量倒推、Wilson CI、背景扣除——多靶点主路径的实验侧，按文献/推导/约定三级标注）。
+- `docs/protocol-execution.md`：**浓度周期的执行层**——涂板比例（0.1–10%，由目标克隆数反算）、剩余菌体五个去处、**板传代 vs 液传代**（含 f_liq/f_plate 桥接验证）、并行时序与四条护栏、乘客账随拓扑的变化（板 1.10 / 液 0.98）、一页操作卡与七条红线。
 - `docs/protocol-ramp.md`：**渐升（ramp）规划与预测规程**——文献两大流派对照、birth-death-mutation 模型的预测边界（pcbi.1014666 精读）、`ramp` 规划器的数学（PAP 拟合/平稳补充/三段账/失守严格式）、记录字段表
 - `docs/start-here.md`：**多靶点入门（5 分钟，零公式）**——三个是非题决定下一步。
 - `docs/multitarget-tutorial.md`：**10 分钟上手**——从“我快 78 倍”到排布表与结论。

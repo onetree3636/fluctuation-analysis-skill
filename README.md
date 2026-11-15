@@ -98,7 +98,8 @@ min E[P] s.t. P(≥k) ≥ 0.95，蒙特卡洛传播 CI 与克隆间离散（gkab
 |---|---|
 | 设计波动实验 / 测参数 | `docs/experiment-design.md` |
 | 理解窗口模型 | `docs/mutator-window.md` |
-| 多靶点/膜活性药 | `docs/multitarget-model.md`（模型）· `docs/multitarget-extrapolation.md`（分类轴）· `docs/protocol-fstep.md`（f_step 铺板规程） |
+| 多靶点/膜活性药 | `docs/multitarget-model.md`（模型）· `docs/multitarget-extrapolation.md`（分类轴）· `docs/protocol-fstep.md`（f_step 铺板规程）· `docs/protocol-ramp.md`（阶梯规划） |
+| 一个浓度周期怎么操作（涂多少 / 剩的去哪 / 板还是液传代 / 能不能不等板） | `docs/protocol-execution.md` |
 | 单位点 μ → 全基因组 M 换算 | `docs/mu-genome-derivation.md` |
 | 验证、golden 对拍、已知差距 | `docs/testing.md` |
 | 术语与口径 | `docs/glossary.md` |
