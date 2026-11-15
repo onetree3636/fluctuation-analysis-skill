@@ -702,7 +702,7 @@ def render_ledger(plan: dict) -> str:
                  "板内扩张可与窗口同量级，务必补测")
     for _name, _fv in plan.get("f_notes") or []:
         from .mtblocks import f_ceiling_note
-        L.append(f"  代价参考（F 只做 QC/表述，**不进供给**）：{_name} F={_fv:g}× → "
+        L.append(f"  代价参考（F 只做 QC/表述，**不进供给**）｜{_name}："
                  f"{f_ceiling_note(_fv)}")
     L.append("")
     L.append("五、怎么读")
