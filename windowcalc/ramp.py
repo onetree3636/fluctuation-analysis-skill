@@ -406,6 +406,8 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
     # ---- ③ 剩余梯级（含已完成档基数）----
     done_cycles = sorted({e["cycle"] for e in f_by_cc.values()},
                          key=lambda s: (0, int(s)) if s.isdigit() else (1, s))
+    # ⚠ 与 mtblocks.window_table_f_step 的乘客口径同源——改这里要同步改那里，
+    #   并跑 tests/test_ledger_formula_pin.py（docs/multitarget-code-map.md §6）
     base = len(done_cycles) * (n_win * m_on + n_plate * (m_off if m_off is not None else 0.0))
     plan = plan_ramp(fit, m_on=m_on, k=k, capacity=capacity,
                      c_start=c_now, c_target=c_target, genome_mb=genome_mb,

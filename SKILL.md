@@ -149,6 +149,9 @@ mutator 会改道（pbio.3001878）——单步效应按实测走，文献只定
 - `docs/experiment-design.md`、`docs/mutator-window.md`、`docs/knowledge-base.md`、`docs/tutorial.md`、`docs/glossary.md`。
 - `docs/viable-count-problems.md`：活菌计数不准（随机误差/低回收/团块/VBNC/超范围）的诊断与校正/替代计数。
 - `docs/protocol-fstep.md`：**f_step 铺板规程**（配对设计、板量倒推、Wilson CI、背景扣除——多靶点主路径的实验侧，按文献/推导/约定三级标注）。
+- `docs/multitarget-code-map.md`：**多靶点路径的代码地图**——模型/公式/算法落在哪个函数、
+  数据在进模型前怎么处理、明确不建模的 7 条、以及**同一批公式有两套实现**（改一处要改两处）
+  的维护者须知 + 对拍测试 `tests/test_ledger_formula_pin.py`。
 - `docs/generic-policy.md`：**通用性政策**——药物名只许来自引用文献、默认值只许来自文献确证的通用值；
   三类载体的写法、自动守卫、新增内容五问。
 - `docs/figures/`：**三张符号化配图**（都不含任何数值，生成脚本同目录、可复现）——

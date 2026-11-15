@@ -336,6 +336,7 @@ def _():
               "docs/mutator-window.md", "examples/record-template.csv",
               "examples/raw_counts_template.csv",
               "docs/generic-policy.md", "docs/protocol-execution.md",
+              "docs/multitarget-code-map.md",
               "docs/figures/cycle-liquid-propagation.png",
               "docs/figures/make_cycle_schematic.py",
               "docs/figures/propagation-topologies.png",

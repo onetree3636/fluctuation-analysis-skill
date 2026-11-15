@@ -98,6 +98,10 @@ def minimal_n0(rate: float, k: float, nt: float,
 
     一阶供给是解析的：`rate · (Nt − N0) ≥ k` ⇒ `N0 ≤ Nt − k/rate`。
     取等号即"刚好够 k"，所以不需要数值搜索。
+
+    ⚠ 同一公式在实跑路径里还有一份：`ramp.render_ledger` 的 "N₀ ≤ Nt_sat − k/f"
+    设计行。改这里要同步改那里，并跑 `tests/test_ledger_formula_pin.py`
+    （见 docs/multitarget-code-map.md §6）。
     """
     if not (nt > n0_min > 0):
         raise ValueError(f"需要 Nt > n0_min > 0（当前 {n0_min!r}, {nt!r}）")
@@ -124,6 +128,10 @@ def window_table_f_step(markers: Sequence[Marker], f_step: float,
     它一次性吸收了 `T_set × 有益比例 × μ_perbp`，所以**不需要**知道靶点个数与长度。
 
     标定标记在这里只用于一条支路：`M = μ_perbp × G`（乘客预算）。
+
+    ⚠ **本函数目前不被 CLI 调用**（CLI 只 import `mu_perbp`）——它是"文档积木"，
+    实跑的同一套账在 `ramp.run_ledger` + `ramp.plan_ramp`。改公式要两处都改，
+    并跑 `tests/test_ledger_formula_pin.py`（见 docs/multitarget-code-map.md §6）。
     """
     if not (f_step > 0):
         raise ValueError(f"f_step={f_step!r} 必须 > 0（克隆数/CFU，铺板实测）")

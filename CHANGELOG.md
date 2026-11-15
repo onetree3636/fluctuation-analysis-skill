@@ -2,6 +2,20 @@
 
 ## 未发布（工作区，2026-11-14 起）
 
+### Added（2026-11-15，代码审查产物）
+
+- **`tests/test_ledger_formula_pin.py`：把"同一批公式的两套实现"钉在一起**。
+  审查发现 `mtblocks.minimal_n0 / window_table_f_step`（文档积木）与
+  `ramp.run_ledger / plan_ramp`（实跑）各写了一遍同样的账，公式一致但无测试锁住。
+  7 项对拍：N₀ 同源、代数↔分裂数换算、乘客 = n·(μ_perbp×G)、失守 = 1−exp(−E·L/G)、
+  梯级累计 = 基数 + i×每档、`n_post` 只在最后一档。
+  **已用变异测试验证**：只改 mtblocks 或只改 ramp，测试立刻红（4 项 / 2 项失败）。
+- **`docs/multitarget-code-map.md`：多靶点路径的代码地图**——九个模型的公式与落点、
+  算法清单、八项数据处理、七条明确不建模的边界、维护者须知（改公式要改两处 + 对拍命令）、
+  一次完整调用的数据流。
+- `mtblocks.minimal_n0 / window_table_f_step` 与 `ramp.run_ledger` 的注释里加回指，
+  写明"同一公式还有一份实跑实现"。
+
 ### Changed（2026-11-15）——通用性政策：技能不得携带项目专属药物名与参数
 
 **用户定的两条硬规则**（细则 `docs/generic-policy.md`）：
