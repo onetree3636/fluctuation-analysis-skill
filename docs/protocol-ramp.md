@@ -283,6 +283,8 @@ python3 run.py multitarget --records records.csv --markers markers.csv \
     --bgc-kb <要保护的 kb> \
     --tau-off-h <τ_off h> --td <倍增 h>          # 同时给才计洗脱尾
     # 可选：--sat-f <饱和阈值，默认 0.5>       # f_post ≥ 该值不进尾部拟合
+    # 可选：--propagation {manual,plate,liquid}  # 档间代数由拓扑自己算：
+    #        plate 要 --cells-per-colony；liquid 要 --nt（--n0 可覆盖）
 ```
 
 - `--records`：§5 的记录字段表（cycle, c, when=pre/post, cfu, clones）；

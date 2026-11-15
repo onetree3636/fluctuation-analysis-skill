@@ -367,6 +367,11 @@ s41467-026-74044-6、science.aaj2191、ng.1034）**全部是液体群体传代**
 > 这一条在 `protocol-fstep.md` §1.2 已有时间线版本（"升档不串行等板"）；
 > 本文档补的是**护栏**（§6.2）与**并行的代价**（§6.3）。
 
+**拓扑不用手算代数**：`multitarget --propagation {manual,plate,liquid}` 会自己折算——
+`plate` 用 `--cells-per-colony` 算 `log₂(每克隆细胞数)`；
+`liquid` 用 `--nt`（+ 可选 `--n0`）算 `log₂(N₀/(f·Nt))`，
+N₀ 缺省取"刚好够 k"的最大接种量 `Nt − k/f`；`manual` 才用你手填的 `--n-plate`。
+
 ### 6.2 四条护栏
 
 | 护栏 | 阈值 | 触发后动作 |
@@ -449,7 +454,8 @@ n_grow = log₂( N₀_next / (f_step × Nt) )
 | 拓扑 | 怎么填 |
 |---|---|
 | 板传代 | `n_plate = log₂(每克隆细胞数)`（按你的菌落大小算） |
-| 液传代 | `n_plate = log₂(N₀/(f×Nt))`，由 §7.1 算 |
+| 液传代 | **不用手填**：`--propagation liquid --nt <Nt>`，工具按 §7.1 算（`--n0` 可覆盖 N₀） |
+| 板传代 | **不用手填**：`--propagation plate --cells-per-colony <每克隆细胞数>` |
 
 **τ_off 尾已进模型**（2026-11-15）：给 `--tau-off-h` 与 `--td`（两者必须同时给），
 账本会按 `(M_on−M_off)/(e^(td/τ)−1)` 每档加一次尾项，并写进报告"其中洗脱尾 = …"。

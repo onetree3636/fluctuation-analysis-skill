@@ -96,6 +96,11 @@ M_on = μ_perbp × G                       ← [B1] 过原点回归 μ̂ = Σ(T_
 `μ_perbp` 用**过原点回归**而不是平均：`T_eff` 因标记而异，μ 不可直接平均。
 同时输出 `spread = max/min`，>2 说明"每碱基率均匀"这条假设在本菌里不成立。
 
+**档间代数怎么来**（2026-11-15 接入 `--propagation`）：`inter_rung_generations()`
+（ramp.py）按拓扑算——`manual` 用用户给的 `--n-plate`；`plate` 用
+`log₂(cells_per_colony)`；`liquid` 用 `log₂(N₀/(f·Nt))`，N₀ 缺省取 `Nt − k/f`。
+已完成档按**各自周期的 f** 算（不是一刀切），来源写进报告的"档间扩增"一行。
+
 **第四段：洗脱尾**（2026-11-15 接入）——`washout_tail()`（ramp.py:139）：
 
 ```

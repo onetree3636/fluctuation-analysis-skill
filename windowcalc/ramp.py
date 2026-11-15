@@ -136,6 +136,56 @@ def predict_f(fit: dict, c: float) -> tuple[float, float | None, float | None]:
 
 # --------------------------------------------------------------------------- 洗脱尾
 
+PROPAGATION_MODES = ("manual", "plate", "liquid")
+
+
+def inter_rung_generations(*, mode: str, n_plate: float = 0.0,
+                           cells_per_colony: float | None = None,
+                           nt: float | None = None, k: float | None = None,
+                           n0: float | None = None, f: float | None = None,
+                           where: str = "") -> tuple[float, str]:
+    """档间扩增代数——按传代拓扑**自己算**，不再让用户手工折算。
+
+    manual : 直接用 `n_plate`（旧行为，向后兼容）
+    plate  : 板传代，1 个细胞 → 可见菌落需要 log2(cells_per_colony) 代
+    liquid : 液传代，存活者 `f·Nt` 长到下一窗的 N₀ 需要 log2(N₀/(f·Nt)) 代，
+             N₀ 缺省取"刚好够 k"的最大接种量 `Nt − k/f`（与账本第三节同一设计）
+
+    返回 (代数, 来源说明)。参数不够时**直接报错**，不猜默认值。
+    """
+    if mode not in PROPAGATION_MODES:
+        raise ValueError(f"propagation={mode!r} 不认识；可选 {PROPAGATION_MODES}")
+    tag = f"（{where}）" if where else ""
+
+    if mode == "manual":
+        return float(n_plate), f"manual：n_plate={n_plate:g}"
+
+    if mode == "plate":
+        if cells_per_colony is None:
+            raise ValueError(f"plate 传代需要 --cells-per-colony{tag}——"
+                             "它是菌落大小的实测/假设值，本技能不内置")
+        if not (cells_per_colony >= 2):
+            raise ValueError(f"cells_per_colony={cells_per_colony!r} 必须 ≥ 2{tag}")
+        return math.log2(cells_per_colony), \
+            f"plate：log2({cells_per_colony:g}) = 每克隆细胞数"
+
+    # liquid
+    if nt is None:
+        raise ValueError(f"liquid 传代需要 --nt（周期末饱和密度）{tag}——"
+                         "没有它算不出存活者要长几代")
+    if f is None or not (f > 0):
+        return 0.0, "liquid：该档无实测 f（按 0 代计，须人工核对）"
+    n0_use = float(n0) if n0 is not None else float(nt) - float(k) / f
+    if not (n0_use > 0):
+        raise ValueError(
+            f"liquid 传代给不出 N₀：Nt − k/f = {n0_use:.3g} ≤ 0{tag}——"
+            "该档 f 太小/ k 太大，先加大容量或降低 k")
+    if not (f * nt > 0):
+        raise ValueError(f"liquid 传代需要 f·Nt > 0（当前 f={f!r}, nt={nt!r}）{tag}")
+    return math.log2(n0_use / (f * nt)), \
+        f"liquid：log2({n0_use:.3g}/({f:.2e}×{nt:.3g}))"
+
+
 def washout_tail(m_on: float, m_off: float | None,
                  tau_off_h: float | None, td_h: float | None) -> float:
     """洗脱后残留活性的额外乘客（每克隆、**每次洗脱**）。
@@ -178,7 +228,10 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
               n_win: float = 1.0, n_plate: float = 0.0, n_post: float = 0.0,
               bgc_kb: float | None = None, margin: float = 3.0,
               max_rungs: int = 200, cum_base: float = 0.0,
-              tau_off_h: float | None = None, td_h: float | None = None) -> dict:
+              tau_off_h: float | None = None, td_h: float | None = None,
+              propagation: str = "manual",
+              cells_per_colony: float | None = None,
+              nt: float | None = None, n0: float | None = None) -> dict:
     """解可行（含 margin）的**最大步长** Δ，输出最省乘客的均匀梯级与累计账。
 
     平稳补充假设：等步长下每档的 f_step ≈ PAP 曲线在 c_start+Δ 处的实测值
@@ -253,7 +306,10 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
     for i in range(1, n_rungs + 1):
         c_to = c_start + i * step
         pw = n_win * m_on
-        pp = n_plate * m_off_eff
+        n_inter, n_inter_src = inter_rung_generations(
+            mode=propagation, n_plate=n_plate, cells_per_colony=cells_per_colony,
+            nt=nt, k=k, n0=n0, f=f_rung, where=f"第 {i} 档")
+        pp = n_inter * m_off_eff
         p_step = pw + pp + p_tail
         cum += p_step
         p_bgc = None if bgc_frac is None else 1.0 - math.exp(-cum * bgc_frac)
@@ -263,6 +319,7 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
             need_cfu=k / f_rung if f_rung > 0 else float("inf"),
             surplus=f_rung * capacity / k,
             p_win=pw, p_plate=pp, p_tail=p_tail, passengers=p_step,
+            n_inter=n_inter, n_inter_source=n_inter_src,
             cum_passengers=cum, p_bgc=p_bgc))
         c_from = c_to
     # 终点后
@@ -283,6 +340,7 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
                 genome_mb=genome_mb, bgc_frac=bgc_frac,
                 n_win=n_win, n_plate=n_plate, n_post=n_post, bgc_kb=bgc_kb,
                 p_tail=p_tail, tau_off_h=tau_off_h, td_h=td_h,
+                propagation=propagation, cells_per_colony=cells_per_colony,
                 f_start=f_start, f_rung=f_rung,
                 p_total=cum, p_bgc=(None if bgc_frac is None else
                                     1.0 - math.exp(-cum * bgc_frac)),
@@ -368,7 +426,10 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
                nt: float | None = None,
                sat_f: float = 0.5,
                tau_off_h: float | None = None,
-               td_h: float | None = None) -> dict:
+               td_h: float | None = None,
+               propagation: str = "manual",
+               cells_per_colony: float | None = None,
+               n0: float | None = None) -> dict:
     """账本解释器：records（cycle, c, when, cfu, clones）→ 现状 + 下一窗设计 + 剩余梯级 + 累计账。
 
     语义（对应 protocol-fstep / protocol-ramp）：
@@ -471,14 +532,38 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
     # ⚠ 与 mtblocks.window_table_f_step 的乘客口径同源——改这里要同步改那里，
     #   并跑 tests/test_ledger_formula_pin.py（docs/multitarget-code-map.md §6）
     p_tail = washout_tail(m_on, m_off, tau_off_h, td_h)
-    base = len(done_cycles) * (n_win * m_on
-                               + n_plate * (m_off if m_off is not None else 0.0)
-                               + p_tail)
+    m_off_eff = m_off if m_off is not None else 0.0
+
+    def _cycle_f(cyc: str) -> float | None:
+        """该周期"升档"用的 f：尾部（f < sat_f）里**最大**的那个 f。
+
+        对应"你实际升到的那一档浓度"——它是可数区里最低的浓度、也是 f 最大的尾点。
+        不能用"最高浓度的 f"：那一点是纯检测点，f 更小，会把 N₀ 算成负数。
+        """
+        rows = [e for e in f_by_cc.values()
+                if e["cycle"] == cyc and e.get("f_step") is not None
+                and 0 < e["f_step"] < sat_f]
+        if not rows:
+            rows = [e for e in f_by_cc.values()
+                    if e["cycle"] == cyc and e.get("f_step")]
+        if not rows:
+            return None
+        return float(max(e["f_step"] for e in rows))
+
+    base, base_detail = 0.0, []
+    for cyc in done_cycles:
+        n_inter, src = inter_rung_generations(
+            mode=propagation, n_plate=n_plate, cells_per_colony=cells_per_colony,
+            nt=nt, k=k, n0=n0, f=_cycle_f(cyc), where=f"cycle {cyc}")
+        base += n_win * m_on + n_inter * m_off_eff + p_tail
+        base_detail.append(dict(cycle=cyc, n_inter=n_inter, source=src))
     plan = plan_ramp(fit, m_on=m_on, k=k, capacity=capacity,
                      c_start=c_now, c_target=c_target, genome_mb=genome_mb,
                      m_off=m_off, n_win=n_win, n_plate=n_plate, n_post=n_post,
                      bgc_kb=bgc_kb, margin=margin, cum_base=base,
-                     tau_off_h=tau_off_h, td_h=td_h)
+                     tau_off_h=tau_off_h, td_h=td_h,
+                     propagation=propagation, cells_per_colony=cells_per_colony,
+                     nt=nt, n0=n0)
     plan["fit"] = fit
     plan["c_now"] = c_now
     plan["c_now_source"] = c_now_source
@@ -489,6 +574,7 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
     plan["sat_f"] = float(sat_f)
     plan["near_sat"] = near_sat
     plan["p_tail"] = p_tail
+    plan["base_detail"] = base_detail
     plan["nt"] = nt
 
     # ---- ④ 下一窗设计（用最新实测 f_step 优先，曲线预测并列）----
@@ -558,6 +644,9 @@ def render_ledger(plan: dict) -> str:
     L.append("三、下一窗设计（第 " + str(len(plan["cycles"]) + 1) + " 档）")
     r1 = plan["ladder"][0]
     L.append(f"  下一档浓度 c = {r1['c_to']:g}（剩余梯级首档）")
+    if plan.get("propagation"):
+        L.append(f"  档间扩增：**{plan['propagation']}** 模式 → "
+                 f"{r1.get('n_inter', 0):.2f} 代/档（{r1.get('n_inter_source', '')}）")
     L.append(f"  预测 f_step（PAP 曲线）= {r1['f_step']:.3g}"
              + (f" [{r1['f_lo']:.1e}, {r1['f_hi']:.1e}]" if r1["f_lo"] is not None else "（点值，<3 正克隆点无 CI）"))
     if plan["f_latest"] is not None:

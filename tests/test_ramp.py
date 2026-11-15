@@ -164,6 +164,7 @@ def test_cli_smoke(tmp_path, capsys):
         n_win=4.0, n_plate=12.0, n_post=4.0, k=30.0, capacity=3e8,
         c_target=5.0, bgc_kb=40.0, margin=3.0, c_start=None, nt=None,
         sat_f=0.5, tau_off_h=None, td=None,
+        propagation="manual", cells_per_colony=None, n0=None,
         json=False, out=None)
     assert cmd_multitarget(args) == 0
     out = capsys.readouterr().out
@@ -178,6 +179,7 @@ def test_cli_refusal_lists_missing(tmp_path):
     args = argparse.Namespace(records=None, markers=str(mk), genome_mb=None,
                               m_off=None, n_win=None, n_plate=0.0, n_post=0.0,
                               sat_f=0.5, tau_off_h=None, td=None,
+                              propagation="manual", cells_per_colony=None, n0=None,
                               k=None, capacity=None, c_target=None,
                               bgc_kb=None, margin=3.0, c_start=None, nt=None,
                               json=False, out=None)

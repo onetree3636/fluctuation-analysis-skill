@@ -1214,7 +1214,9 @@ def cmd_multitarget(args) -> int:
                       k=args.k, capacity=args.capacity,
                       c_target=args.c_target, bgc_kb=args.bgc_kb,
                       margin=args.margin, c_start=args.c_start, nt=args.nt,
-                      sat_f=args.sat_f, tau_off_h=args.tau_off_h, td_h=args.td)
+                      sat_f=args.sat_f, tau_off_h=args.tau_off_h, td_h=args.td,
+                      propagation=args.propagation,
+                      cells_per_colony=args.cells_per_colony, n0=args.n0)
     plan["version"] = __version__
     plan["calibration"] = cal
     text = render_ledger(plan)
@@ -1394,14 +1396,23 @@ def build_parser() -> argparse.ArgumentParser:
                        help="泄漏的全基因组速率 M_off（给了才把窗口外段计入乘客；"
                             "不给则报告注明“未计”）")
     ap_mt.add_argument("--n-plate", type=float, default=0.0,
-                       help="每档板内扩张代数（默认 0=不计；估法 log₂(每克隆细胞数)，"
-                            "按你自己的菌落大小算——泄漏核算强烈建议提供）")
+                       help="manual 模式的档间代数（默认 0=不计）。"
+                            "plate/liquid 模式下由 --propagation 自己算，本参数被忽略")
     ap_mt.add_argument("--n-post", type=float, default=0.0,
                        help="终点后（稳定性/PAP/WGS 前）代数（默认 0=不计）")
     ap_mt.add_argument("--bgc-kb", type=float, default=None,
                        help="要保护的区域大小 kb（给了才报累计失守概率）")
     ap_mt.add_argument("--margin", type=float, default=3.0,
                        help="每档可行性安全倍数（默认 3.0：预测克隆数 ≥ 3×k 才开档）")
+    ap_mt.add_argument("--propagation", choices=["manual", "plate", "liquid"],
+                       default="manual",
+                       help="传代拓扑：manual=直接用 --n-plate；"
+                            "plate=按 --cells-per-colony 算 log2；"
+                            "liquid=按 log2(N₀/(f·Nt)) 算（需 --nt）")
+    ap_mt.add_argument("--cells-per-colony", type=float, default=None,
+                       help="plate 模式：每个可见克隆的细胞数（实测/假设，本技能不内置）")
+    ap_mt.add_argument("--n0", type=float, default=None,
+                       help="liquid 模式：下一窗的接种密度（缺省取 Nt − k/f）")
     ap_mt.add_argument("--sat-f", type=float, default=0.5,
                        help="饱和阈值：f_post ≥ 该值视为饱和、不进 PAP 尾部拟合"
                             "（默认 0.5 = 长到与未处理相当；±20%% 带内的点会被标出）")

@@ -236,3 +236,97 @@ def test_delta_ci_brackets_point_estimate():
     lo, hi = fit["delta_ci"]
     assert lo < fit["delta"] < hi
     assert fit["delta"] == pytest.approx(-1.0 / fit["slope"], rel=1e-12)
+
+
+# ---------------------------------------------------------------- 6. 传代拓扑（2026-11-15 新增）
+
+def test_propagation_manual_uses_n_plate_as_is():
+    from windowcalc.ramp import inter_rung_generations
+    n, src = inter_rung_generations(mode="manual", n_plate=12.0)
+    assert n == 12.0 and "manual" in src
+
+
+def test_propagation_plate_is_log2_cells_per_colony():
+    from windowcalc.ramp import inter_rung_generations
+    n, src = inter_rung_generations(mode="plate", cells_per_colony=1024.0)
+    assert n == pytest.approx(10.0, rel=1e-12)          # log2(1024)
+    assert "plate" in src
+    with pytest.raises(ValueError, match="cells-per-colony"):
+        inter_rung_generations(mode="plate")
+    with pytest.raises(ValueError):
+        inter_rung_generations(mode="plate", cells_per_colony=1.0)
+
+
+def test_propagation_liquid_is_log2_n0_over_survivors():
+    from windowcalc.ramp import inter_rung_generations
+    nt, k, f = 1.0e9, 12.0, 1.0e-6
+    n, src = inter_rung_generations(mode="liquid", nt=nt, k=k, f=f)
+    n0 = nt - k / f                        # 缺省：刚好够 k 的最大接种量
+    assert n == pytest.approx(math.log2(n0 / (f * nt)), rel=1e-12)
+    assert "liquid" in src
+    # 显式给 N₀ 时按它算
+    n2, _ = inter_rung_generations(mode="liquid", nt=nt, k=k, f=f, n0=5.0e7)
+    assert n2 == pytest.approx(math.log2(5.0e7 / (f * nt)), rel=1e-12)
+    # 缺 --nt 直接报错（不猜）
+    with pytest.raises(ValueError, match="--nt"):
+        inter_rung_generations(mode="liquid", k=k, f=f)
+    # N₀ 给不出（f 太小 / k 太大）
+    with pytest.raises(ValueError, match="N₀"):
+        inter_rung_generations(mode="liquid", nt=1.0e6, k=12.0, f=1.0e-6)
+
+
+def test_ledger_base_uses_each_cycles_own_f():
+    """liquid 模式下，已完成档的档间代数按**该周期自己的 f** 算，不是一刀切。"""
+    from windowcalc.ramp import inter_rung_generations
+    w = window_table_f_step(MK, f_step=F_STEP, k=K, nt=NT, genome_mb=GENOME_MB)
+    m_on, m_off, nt = w["m_genome"], 0.01, 1.0e9
+    n_win = 4.0
+    recs = [
+        ("1", 1.0, "post", 1e9, int(8e8)),   # 饱和
+        ("1", 2.0, "post", 1e9, 1000),       # f=1e-6
+        ("1", 3.0, "post", 1e9, 100),        # f=1e-7
+        ("2", 1.0, "post", 1e9, int(8e8)),   # 饱和
+        ("2", 2.0, "post", 1e9, 10000),      # f=1e-5 ← 与 cycle 1 不同
+        ("2", 3.0, "post", 1e9, 1000),       # f=1e-6
+    ]
+    plan = run_ledger(recs, m_on=m_on, m_off=m_off, genome_mb=GENOME_MB,
+                      n_win=n_win, n_plate=0.0, n_post=0.0, k=K,
+                      capacity=1.0e9, c_target=10.0, bgc_kb=None, margin=3.0,
+                      nt=nt, propagation="liquid")
+    n1, _ = inter_rung_generations(mode="liquid", nt=nt, k=K, f=1e-6)
+    n2, _ = inter_rung_generations(mode="liquid", nt=nt, k=K, f=1e-5)
+    assert plan["base_passengers"] == pytest.approx(
+        2 * n_win * m_on + (n1 + n2) * m_off, rel=1e-12)
+    # 两个周期的档间代数不同（证明不是一刀切）
+    assert n1 != n2
+
+
+def test_cli_liquid_mode_without_nt_refuses():
+    from windowcalc.cli import cmd_multitarget
+    import argparse
+    args = argparse.Namespace(
+        records=str(_TMP_RECORDS_PATH()), markers=str(_TMP_MARKERS_PATH()),
+        genome_mb=GENOME_MB, m_off=0.01, n_win=4.0, n_plate=0.0, n_post=0.0,
+        k=K, capacity=1.0e9, c_target=10.0, bgc_kb=None, margin=3.0,
+        c_start=None, nt=None, sat_f=0.5, tau_off_h=None, td=None,
+        propagation="liquid", cells_per_colony=None, n0=None,
+        json=False, out=None)
+    with pytest.raises(ValueError, match="--nt"):
+        cmd_multitarget(args)
+
+
+def _TMP_RECORDS_PATH():
+    import tempfile, os
+    fd, path = tempfile.mkstemp(suffix=".csv")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write("cycle,c,when,cfu,clones\n"
+                "1,1,post,1e9,800000000\n1,2,post,1e9,1000\n1,3,post,1e9,100\n")
+    return path
+
+
+def _TMP_MARKERS_PATH():
+    import tempfile, os
+    fd, path = tempfile.mkstemp(suffix=".csv")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write("marker,mu,teff_bp\nmarkerA,1.0e-7,10\n")
+    return path
