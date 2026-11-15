@@ -2,6 +2,28 @@
 
 ## 未发布（工作区，2026-11-14 起）
 
+### Added / Fixed（2026-11-15，文档↔代码不变量：一次抓到 6 处漂移）
+
+**新增 selftest 第 27 项**「文档↔代码：参数名与关键常量一致」，三部分：
+
+| 部分 | 断言 | 意图 |
+|---|---|---|
+| A 参数名 | 文档里出现的每个 `--flag` 必须真实存在于 CLI（含子命令），只放行 4 个写明出处的例外（`--delete` rsync、`--doctor` run.py、`--quick` selftest、`--mu-wt` 错误路径示例） | 命令改名/并入后文档不会留死链 |
+| B 关键常量 | `sat_f` 默认 0.5 ↔ 护栏 G22 的"0.5"；`wilson_ci(0,n)=3/n` ↔ 术语表的 `3/N`；`Z95≈1.96`；`f_ceiling_note` 的 22×/139× ↔ 代码地图；`3*M_base` 泄漏红线 ↔ 实验设计；`0.8/1.2·sat_f` 的 ±20% 带 ↔ 护栏 | 阈值只有一个事实源 |
+| C 声称一致 | 代码已有 `washout_tail`，文档不得再说"τ 尾不建模/不进账本" | 防"文档说缺、代码已补"的错位 |
+
+**首跑即抓到并修复的 6 处真实漂移**（都是"照着文档做会错"）：
+
+1. `multitarget --f-step` → 应为 `--records`（protocol-fstep ×2、start-here、intake ×2、SKILL.md ×2）；
+2. `ramp --pap` → 子命令已并入（protocol-ramp 决策流与 §7 两处）；
+3. `--defaults-ok` → 不存在，只有 `--fill-defaults`（SKILL.md 铁律）；
+4. `design --steps …` → 命令已删（multitarget-model 的分类型表）；
+5. `multitarget --mode design` → 模式已删（同表另一行）；
+6. `--steps`/`--mode design` 所在表格整体改为"按 D2 台阶数算 j → 走账本"。
+
+- 验证方式：往任意文档里插一个 `--bogus-flag`，检查立刻红并指出 `文件: 旗标`；删掉即恢复。
+- 自检项 26 → 27（SKILL.md、testing.md 同步）。
+
 ### Changed（2026-11-15，护栏三元组化：从"清单"变"触发条件"）
 
 问题：`guardrails.md` 是"跑 X 之前必问 4/1/5 条"的清单，但**没有触发条件**——

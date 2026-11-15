@@ -28,7 +28,7 @@
 2. **标定标记的突变率**：`rate` 算，≥1 个单拷贝蛋白靶标（推荐两个不同染色体域）；
 3. **k**（想要几个独立克隆）、基因组大小、饱和密度。
 
-都有 → 跑 `multitarget --f-step … --markers … --k … --nt … --genome-mb …`。
+都有 → 跑 `multitarget --records … --markers … --k … --nt … --genome-mb …`。
 没有 → 我先给你测量方案（配对铺板 f₀/f₁ + 12 管试点），测完再算。
 
 ### (b)「帮我设计耐药实验」

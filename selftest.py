@@ -399,6 +399,89 @@ GENERIC_BANNED = [
 ]
 
 
+@check("文档↔代码：参数名与关键常量一致（防文档漂移）")
+def _():
+    """第三道不变量：文档里写的参数名/阈值，必须与代码里真实存在的一致。
+
+    2026-11-15 首次跑就抓到 6 处漂移：`--f-step`（命令已并入）、`--pap`、`--defaults-ok`、
+    `--steps`、以及 `--mode design` 的残留。文档漂移不会报错，只会让人照着错的做。
+    """
+    import inspect
+    import re as _re
+    sys.path.insert(0, str(ROOT))
+    from windowcalc.cli import build_parser
+    from windowcalc import ramp as _ramp
+    from windowcalc.mtblocks import f_ceiling_note
+
+    docs = ([ROOT / "SKILL.md"] + sorted((ROOT / "docs").glob("*.md"))
+            + sorted((ROOT / "references").glob("*.md")))
+
+    # ---- A. 参数名：文档里出现的 --flag 必须真的存在 ----
+    ap = build_parser()
+    opts: set[str] = set()
+
+    def walk(p):
+        for a in p._actions:
+            opts.update(a.option_strings)
+            if isinstance(getattr(a, "choices", None), dict):
+                for sp in a.choices.values():
+                    walk(sp)
+
+    walk(ap)
+    # 不属于本 CLI、但文档里合法出现的旗标（每条都写清出处）
+    external = {
+        "--delete": "rsync 的旗标（maintainer.md）",
+        "--doctor": "run.py 的旗标",
+        "--quick": "selftest.py 自己的旗标（testing.md）",
+        "--mu-wt": "testing.md 的『错误路径』示例——故意用一个不存在的旗标",
+    }
+    bad = []
+    for d in docs:
+        for m in _re.finditer(r"--[A-Za-z][A-Za-z0-9-]*", d.read_text(encoding="utf-8")):
+            flag = m.group(0)
+            if flag not in opts and flag not in external:
+                bad.append(f"{d.name}: {flag}")
+    assert not bad, "文档里出现不存在的参数：\n  " + "\n  ".join(sorted(set(bad))[:15])
+
+    # ---- B. 关键常量：代码值 ↔ 文档里的同一句话 ----
+    def line_has(doc: str, kw: str, token: str) -> bool:
+        for ln in (ROOT / doc).read_text(encoding="utf-8").splitlines():
+            if kw in ln and token in ln:
+                return True
+        return False
+
+    sat_default = inspect.signature(_ramp.run_ledger).parameters["sat_f"].default
+    assert sat_default == 0.5, f"sat_f 默认值变了（{sat_default}）——同步 docs 的'f ≥ 0.5'"
+    assert line_has("references/guardrails.md", "饱和点", "0.5"), "护栏 G22 没写饱和阈值 0.5"
+
+    from windowcalc.fstep import wilson_ci
+    assert abs(wilson_ci(0, 10 ** 8)[2] * 10 ** 8 - 3.0) < 1e-9, "rule of three 不是 3/n"
+    assert line_has("docs/glossary.md", "rule of three", "3/N"), "术语表没写 3/N"
+
+    assert abs(_ramp.Z95 - 1.96) < 0.01, "Z95 变了——同步文档里的 1.96"
+    assert any("1.96" in (ROOT / d).read_text(encoding="utf-8")
+               for d in ("docs/protocol-ramp.md", "docs/multitarget-code-map.md",
+                         "docs/generic-policy.md")), "文档里找不到 Wilson 的 z=1.96"
+
+    assert "22" in f_ceiling_note(22) and "139" in f_ceiling_note(139), "F 代价带变了"
+    assert line_has("docs/multitarget-code-map.md", "22×", "139×"), "代码地图没写 22×/139×"
+
+    src_model = (ROOT / "windowcalc" / "model.py").read_text(encoding="utf-8")
+    assert "3*M_base" in src_model, "泄漏红线 3×M_base 改了？"
+    assert line_has("docs/experiment-design.md", "M_off", "3×M_base"), "实验设计没写 3×M_base 合格线"
+
+    src_ramp = (ROOT / "windowcalc" / "ramp.py").read_text(encoding="utf-8")
+    assert "0.8 * sat_f" in src_ramp and "1.2 * sat_f" in src_ramp, "±20% 边界带的实现变了"
+    assert line_has("references/guardrails.md", "±20%", "饱和"), "护栏没写 ±20% 边界带"
+
+    # ---- C. 声称一致性：不许说"没建模"而代码其实建了 ----
+    if hasattr(_ramp, "washout_tail"):
+        stale = [d.name for d in docs
+                 if _re.search(r"τ[^\n]{0,12}(不建模|未建模|不进账本|未进账本)",
+                               d.read_text(encoding="utf-8"))]
+        assert not stale, f"washout_tail 已实现，但这些文档还说没建模：{stale}"
+
+
 @check("护栏：每个子命令都在 guardrails §0，且引用的 G 编号都有定义")
 def _():
     """2026-11-15 的"护栏三元组化"：命令 ↔ 触发编号必须双向对得上。

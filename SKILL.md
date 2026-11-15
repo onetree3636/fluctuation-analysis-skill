@@ -55,8 +55,8 @@ allowed-tools: Bash Read Write Edit Glob Grep
 - **外推必须给结论**：明确说“可以给先验 / 只能当量级参考 / 不可外推”三选一，并给出下一步（试点或实测）；未确认目标标记类型前，不得继续算窗口。
 - **数值参数必填**：`power` 的 `--mu/--mu1/--nt-mean`、`fit-tauoff` 的 `--td`、`design-induction` 的 `--nt`
   都是必填——本技能不内置任何项目实测默认值（通用性政策），缺了就报缺，不许猜。
-- **缺参不得自行填默认**：必须把“缺什么 / 默认值多少 / 用默认的后果 / 怎么拿到”原样呈现，**等用户明确同意**后才加 `--fill-defaults` 或 `--defaults-ok`；agent 不得替用户同意。
-- **多靶点只有一条计算路径**：`multitarget --f-step …`（供给=铺板实测）+ 标定链只算乘客（M = μ_perbp × G）。**禁止用 μ×T_set 外推供给**——几何路线与 `--mode design/fit/classify` 已于 2026-11-13 删除；F 不进窗口计算，只做 QC 与 22×/139× 代价判断；谷型（C 律）已于 2026-11-12 移除。
+- **缺参不得自行填默认**：必须把“缺什么 / 默认值多少 / 用默认的后果 / 怎么拿到”原样呈现，**等用户明确同意**后才加 `--fill-defaults`；agent 不得替用户同意。
+- **多靶点只有一条计算路径**：`multitarget --records …`（供给=铺板实测）+ 标定链只算乘客（M = μ_perbp × G）。**禁止用 μ×T_set 外推供给**——几何路线与 `--mode design/fit/classify` 已于 2026-11-13 删除；F 不进窗口计算，只做 QC 与 22×/139× 代价判断；谷型（C 律）已于 2026-11-12 移除。
 
 ## 先判断用户要哪一类
 
@@ -102,7 +102,7 @@ mutator 会改道（pbio.3001878）——单步效应按实测走，文献只定
 | fit-induction | 剂量机制 | `--m-off`、`--query` |
 | fit-fc | 剂量响应 | `--mu-base` |
 | fit-tauoff | 衰变 | `--mu-off`、`--td` |
-| multitarget | 多靶点窗口：f_step 实测供给 + 乘客标定链（M = μ_perbp × G） | `--f-step --markers --k --nt --genome-mb [--bgc-kb]`；缺参**不跑**、不得编造 |
+| multitarget | 多靶点窗口：f_step 实测供给 + 乘客标定链（M = μ_perbp × G） | `--records --markers --k --nt --genome-mb [--bgc-kb]`；缺参**不跑**、不得编造 |
 
 **rate 输入**：每行一管 `r[,Nt[,volume_mL]]`；可读 `.csv/.txt/.xlsx`（第一个工作表）；
 表头可留；第 1 列 r、第 2 列 Nt；Nt 是 **CFU/管**（CFU/mL 用 `--nt-unit per_mL --volume-mL`）。
@@ -157,4 +157,4 @@ mutator 会改道（pbio.3001878）——单步效应按实测走，文献只定
 - **`references/`（agent 专用）**：`commands.md`（9 个子命令逐条）· `guardrails.md`（必问清单）·
   `markers.md`（标记外推）· `multitarget-intake.md`（多靶点接入）· `guardrails.md` §0（命令→该查哪几条）·
   `install.md` / `maintainer.md`（部署与发布）
-- 维护者自检 **26 项：环境**、入口自举、规范校验、**9 个子命令**、Excel、已知答案、端到端报告、文档一致性、错误路径、断链、多靶点缺参拦截、**通用性（无项目专属药物名/参数）**、**文档分级（横幅 + INDEX）**、**护栏覆盖（每个子命令都在 guardrails §0，G 编号无悬空）**。
+- 维护者自检 **27 项：环境**、入口自举、规范校验、**9 个子命令**、Excel、已知答案、端到端报告、文档一致性、错误路径、断链、多靶点缺参拦截、**通用性（无项目专属药物名/参数）**、**文档分级（横幅 + INDEX）**、**护栏覆盖（每个子命令都在 guardrails §0）**、**文档↔代码（参数名/常量/声称一致）**。

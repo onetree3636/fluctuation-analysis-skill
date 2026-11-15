@@ -4,7 +4,7 @@
 > 入口与完整分级见 `INDEX.md`。
 
 > **证据分级**：[文献] = 有出处；[推导] = 本文算术，可复算；[约定] = 本项目操作约定（非文献值）。
-> 本文是多靶点主路径（`multitarget --f-step`）的**实验侧规程**；数学见 `docs/multitarget-model.md`，术语见 `docs/glossary.md` §七。
+> 本文是多靶点主路径（`multitarget --records`）的**实验侧规程**；数学见 `docs/multitarget-model.md`，术语见 `docs/glossary.md` §七。
 
 ---
 
@@ -182,7 +182,7 @@ f_step(校正) = f_post − f_pre
 - f_pre 的来源：无脉冲的假抗性（b·N）+ 上一步残留的耐受细胞；
 - **红灯（[约定]，与 `optimize` 背景红灯同口径）**：f_pre ≥ 0.5 × f_post →
   本档不可用（背景淹没真供给）：先解决假抗性/交叉污染，再谈窗口；
-- 扣除后的 f_step 才能进 `multitarget --f-step`（CLI 不做扣除，**进参前自己扣**）。
+- 扣除后的 f_step 才能进 `multitarget --records`（CLI 不做扣除，**进参前自己扣**）。
 
 ---
 

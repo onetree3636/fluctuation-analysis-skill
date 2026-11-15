@@ -97,8 +97,8 @@ f_step 编不出来——它是**这次实验**的实测值。
 
 | 用户已有 | 先跑 | 再跑 |
 |---|---|---|
-| 标记计数表 `r, Nt` | `rate` | `multitarget --f-step …` |
-| WT/mutator 两批 | `compare`（F，仅 QC/代价） | `multitarget --f-step …` |
+| 标记计数表 `r, Nt` | `rate` | `multitarget --records …` |
+| WT/mutator 两批 | `compare`（F，仅 QC/代价） | `multitarget --records …` |
 | 耐药克隆的 WGS | — | 数乘客 → 校准 M（`docs/knowledge-base.md`） |
 
 ---
