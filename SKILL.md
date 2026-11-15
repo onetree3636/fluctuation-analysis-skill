@@ -57,11 +57,27 @@ allowed-tools: Bash Read Write Edit Glob Grep
 | 两批速率有没有差 | `compare` | 同上 |
 | 要铺多少管 / 功效 | `power`（先确认 1σ 还是 95% CI 口径） | 同上 |
 | 测什么 / 实验怎么设计 | 按 `docs/experiment-design.md` 给完整设计 | 该文档 |
-| 窗口 / 表达多久 / 乘客预算 | 先按 `references/intake.md` 问齐菌株参数 → `design-induction` → `fit-induction` → `optimize` | `docs/mutator-window.md` |
+| 窗口 / 表达多久 / 乘客预算 | **先过 j 三问**（表后）→ j=1：`references/intake.md` 问齐 → `optimize`；j≥2：`references/multitarget-intake.md` 问齐 → `multitarget --records`（每档结束重跑重算 j） | `docs/mutator-window.md` / `docs/protocol-ramp.md` |
 | 剂量响应 / τ_off | `fit-fc` / `fit-tauoff` | `references/commands.md` |
 | 概念 / 原理 / 设计逻辑 / 选估计器 | 读 `docs/knowledge-base.md` 后回答（开篇有定义与“七个为什么”） | 该文档 |
 | 用一种标记测速、想外推到另一种 | 先读 `references/markers.md`，走 4 问检查清单；**不得直接把 μ_X 填成 μ_supply** | 该文档 |
-| **多靶点/膜活性药：窗口怎么定、乘客多少** | 按 `references/multitarget-intake.md` 问齐三样实测值（**f_step / 标定标记 / k·G·Nt**）→ `multitarget --f-step …`；先过 `references/multitarget-guardrails.md` | `docs/multitarget-tutorial.md` |
+| **多靶点/膜活性药：渐升怎么规划、乘客多少** | **先过 j 三问**（表后）→ 按 `references/multitarget-intake.md` 问齐实测值（**PAP 板 / 标定标记 / k·capacity·Nt**）→ `multitarget --records …`；先过 `references/multitarget-guardrails.md` | `docs/protocol-ramp.md` |
+
+
+### j 三问——任何窗口设计前必过（决定实验形状）
+
+> 对新手只说一句："**先别挑命令——先回答：你要跨几档？**" 这决定实验是
+> 一次诱导脉冲（j=1）还是"每档 pre/post 配对板 + 逐档审计"的渐升（j≥2），
+> 两者的人力、板量、可审计性完全不同。
+
+| 问 | 不知道时 |
+|---|---|
+| ① 目标倍数？（目标浓度 ÷ 起点浓度，或目标 MIC ÷ 当前 MIC） | 必答 |
+| ② 单步中位效应？（同类药每步的 MIC 抬升；脂肽常见 20–30×，Rif 式单步即可） | 查同源药文献；没有 → **第一档就是先导实验**，实测后再答一次 |
+| ③ j = ⌈log(①)/log(②)⌉ | j=1 → `optimize` 单窗直达；j≥2 → `multitarget` 逐档账本；**每档结束重算 j** |
+
+②取文献值要打折：可及路径可能 <20%（ncomms13002 五突变仅 22 条可行）、
+mutator 会改道（pbio.3001878）——单步效应按实测走，文献只定方向。
 
 ## 9 个子命令（速查）
 
