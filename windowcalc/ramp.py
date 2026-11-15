@@ -89,20 +89,27 @@ def fit_pap(points: Sequence[tuple[float, int, float]],
     sigma2 = None
     se_slope = None
     delta_ci = None
+    ci_includes_zero = False
     pred_se = None
     if n >= 3:
         sigma2 = ss_res / (n - 2)
         se_slope = math.sqrt(sigma2 / sxx)
         # slope 95%CI → δ CI（s<0 时 1/s 单调减，端点交换）
         s_lo, s_hi = slope - Z95 * se_slope, slope + Z95 * se_slope
-        delta_ci = (-1.0 / s_hi if s_hi < 0 else float("inf"),
-                    -1.0 / s_lo if s_lo < 0 else float("inf"))
+        # δ = −1/s：s<0 时 −1/s 随 s 增大而增大，所以**下端点由 s_lo、上端点由 s_hi**。
+        # （2026-11-15 修：此前写成 (−1/s_hi, −1/s_lo)，区间上下颠倒，打印成 [大, 小]。）
+        delta_ci = (-1.0 / s_lo if s_lo < 0 else float("inf"),
+                    -1.0 / s_hi if s_hi < 0 else float("inf"))
+        ci_includes_zero = (s_hi >= 0)
         pred_se = lambda c: math.sqrt(sigma2 * (1 + (c - xbar) ** 2 / sxx))  # noqa: E731
     c_ref = float(c_ref) if c_ref is not None else pos[-1][0]
     f_ref = 10.0 ** (intercept + slope * c_ref)
     if f_ref <= 0 or not (f_ref < float("inf")):
         raise ValueError("PAP 拟合出非正的 f_ref——检查输入数量级")
     flags = []
+    if ci_includes_zero:
+        flags.append("斜率的 95%CI 含 0（s≥0）：δ 上界不可定——该尾段几乎是一条水平线，"
+                     "补更高浓度的点，或确认表型确实是耐受")
     for c, ub in censored:
         if (intercept + slope * c) > math.log10(ub):
             flags.append(f"c={c:g} 实测 0 克隆（上界 {ub:.1e}），但拟合值 "
@@ -127,6 +134,42 @@ def predict_f(fit: dict, c: float) -> tuple[float, float | None, float | None]:
     return f, lo, hi
 
 
+# --------------------------------------------------------------------------- 洗脱尾
+
+def washout_tail(m_on: float, m_off: float | None,
+                 tau_off_h: float | None, td_h: float | None) -> float:
+    """洗脱后残留活性的额外乘客（每克隆、**每次洗脱**）。
+
+    洗脱时 mutase/效应蛋白不是瞬间消失，而是按 τ_off 衰减；板/液扩的前几代
+    仍带着 > M_off 的活性。按"每代 td_h 小时"离散求和：
+
+        tail = (M_on − M_off) · Σ_{g≥1} exp(−g·td/τ)
+             = (M_on − M_off) / (exp(td/τ) − 1)              [推导]
+
+    连续极限（td ≪ τ）退化为 (M_on−M_off)·τ/td，与 `fit_tauoff` 的
+    ∫₀^∞(μ−μ_off)dt / td 一致。
+
+    两个参数**必须同时给或同时不给**：只给一个时无法折算，直接报错
+    （本技能不内置任何默认值——见 docs/generic-policy.md）。
+    """
+    if tau_off_h is None and td_h is None:
+        return 0.0
+    if tau_off_h is None or td_h is None:
+        raise ValueError(
+            "洗脱尾需要 --tau-off-h 与 --td 同时给出（只给一个无法折算）："
+            f"当前 tau_off_h={tau_off_h!r}、td_h={td_h!r}")
+    if not (tau_off_h > 0):
+        raise ValueError(f"tau_off_h={tau_off_h!r} 必须 > 0")
+    if not (td_h > 0):
+        raise ValueError(f"td_h={td_h!r} 必须 > 0")
+    if m_off is None:
+        return 0.0                     # 没有泄漏基线就无从定义"超出部分"
+    excess = float(m_on) - float(m_off)
+    if excess <= 0:
+        return 0.0
+    return excess / math.expm1(td_h / tau_off_h)
+
+
 # --------------------------------------------------------------------------- 规划
 
 def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
@@ -134,7 +177,8 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
               m_off: float | None = None,
               n_win: float = 1.0, n_plate: float = 0.0, n_post: float = 0.0,
               bgc_kb: float | None = None, margin: float = 3.0,
-              max_rungs: int = 200, cum_base: float = 0.0) -> dict:
+              max_rungs: int = 200, cum_base: float = 0.0,
+              tau_off_h: float | None = None, td_h: float | None = None) -> dict:
     """解可行（含 margin）的**最大步长** Δ，输出最省乘客的均匀梯级与累计账。
 
     平稳补充假设：等步长下每档的 f_step ≈ PAP 曲线在 c_start+Δ 处的实测值
@@ -142,6 +186,8 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
     因此规划结果**每档都要被实测审计**（回填 --pap 重算）。
 
     m_off 为空 → 窗口外段（板内扩张/终点后）不计入乘客，报告中显式注明。
+    tau_off_h/td_h 同时给出时，每档再计一次**洗脱尾**（见 `washout_tail`）；
+    只给一个直接报错，都不给则不计并在报告中注明。
     """
     if not (m_on > 0):
         raise ValueError(f"m_on={m_on!r} 必须 > 0（μ_perbp × G）")
@@ -159,6 +205,7 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
         raise ValueError("genome_mb 必须 > 0（保护区占比 L_prot/G 的分母）")
     span = float(c_target) - float(c_start)
     bgc_frac = (bgc_kb * 1000.0) / (genome_mb * 1e6) if bgc_kb else None
+    p_tail = washout_tail(m_on, m_off, tau_off_h, td_h)
 
     # 可行最大步长：f(c_start+Δ) = k·margin/capacity
     thr = (k * margin) / capacity
@@ -177,7 +224,8 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
                         f"起步即不可行：当前群体在 c_start 处的频率 {f_start:.2e} × "
                         f"容量 {capacity:.3g} = {f_start * capacity:.3g} < k={k:g}。"
                         "先富集（液体无药/低药预培养扩大耐受群）、加大容量或降低 k。"),
-                    p_total=None, p_bgc=None, flags=list(fit.get("flags", [])))
+                    p_total=None, p_bgc=None, flags=list(fit.get("flags", [])),
+                    p_tail=p_tail, tau_off_h=tau_off_h, td_h=td_h)
     if delta_step <= 0:
         # 起点 f 满足 k，但满足不了 margin——margin 下卡住
         return dict(status="卡住", ladder=[], span=span, delta=None, k=float(k),
@@ -190,7 +238,8 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
                         f"margin={margin:g} 下起步即卡住：f(c_start)·capacity = "
                         f"{f_start * capacity:.3g} < k×margin = {k * margin:.3g}。"
                         "降低 margin（接受更少克隆）或加大容量。"),
-                    p_total=None, p_bgc=None, flags=list(fit.get("flags", [])))
+                    p_total=None, p_bgc=None, flags=list(fit.get("flags", [])),
+                    p_tail=p_tail, tau_off_h=tau_off_h, td_h=td_h)
     delta_step = min(delta_step, span)
     n_rungs = max(1, int(math.ceil(span / delta_step - 1e-12)))
     n_rungs = min(n_rungs, max_rungs)
@@ -205,7 +254,7 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
         c_to = c_start + i * step
         pw = n_win * m_on
         pp = n_plate * m_off_eff
-        p_step = pw + pp
+        p_step = pw + pp + p_tail
         cum += p_step
         p_bgc = None if bgc_frac is None else 1.0 - math.exp(-cum * bgc_frac)
         ladder.append(dict(
@@ -213,12 +262,12 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
             f_step=f_rung, f_lo=f_rung_lo, f_hi=f_rung_hi,
             need_cfu=k / f_rung if f_rung > 0 else float("inf"),
             surplus=f_rung * capacity / k,
-            p_win=pw, p_plate=pp, passengers=p_step,
+            p_win=pw, p_plate=pp, p_tail=p_tail, passengers=p_step,
             cum_passengers=cum, p_bgc=p_bgc))
         c_from = c_to
     # 终点后
     if n_post > 0:
-        cum += n_post * m_off_eff
+        cum += n_post * m_off_eff + p_tail        # 末次洗脱同样有尾
         if ladder:
             ladder[-1]["cum_passengers"] = cum
             ladder[-1]["p_bgc"] = (None if bgc_frac is None else
@@ -233,6 +282,7 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
                 c_target=float(c_target), m_on=m_on, m_off=m_off,
                 genome_mb=genome_mb, bgc_frac=bgc_frac,
                 n_win=n_win, n_plate=n_plate, n_post=n_post, bgc_kb=bgc_kb,
+                p_tail=p_tail, tau_off_h=tau_off_h, td_h=td_h,
                 f_start=f_start, f_rung=f_rung,
                 p_total=cum, p_bgc=(None if bgc_frac is None else
                                     1.0 - math.exp(-cum * bgc_frac)),
@@ -300,7 +350,7 @@ def render(plan: dict) -> str:
     L.append("  - 预测锚在 PAP 实测曲线上，平稳补充假设会随机制天花板/谱系效应失效——")
     L.append("    每档实测 f_step 后回填 --pap 重算；预测偏出 CI → 曲线重拟合")
     L.append("  - 富余（surplus）大的档可评估**关诱导**：省 (M_on−M_off)×n_win/档"
-             "（先修泄漏，否则“关”也有 4.2× 地板价）")
+             "（先修泄漏，否则\"关\"也要付 M_off/M_base 的地板价）")
     if plan.get("extrapolation_decades") is not None and plan["extrapolation_decades"] > 1:
         L.append(f"  ⚠ 规划外推超出 PAP 实测范围约 {plan['extrapolation_decades']:.1f} 个 δ"
                  "——远端档的预测最脆弱，优先实测")
@@ -315,7 +365,10 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
                k: float, capacity: float, c_target: float,
                bgc_kb: float | None, margin: float,
                c_start: float | None = None,
-               nt: float | None = None) -> dict:
+               nt: float | None = None,
+               sat_f: float = 0.5,
+               tau_off_h: float | None = None,
+               td_h: float | None = None) -> dict:
     """账本解释器：records（cycle, c, when, cfu, clones）→ 现状 + 下一窗设计 + 剩余梯级 + 累计账。
 
     语义（对应 protocol-fstep / protocol-ramp）：
@@ -323,15 +376,21 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
         红灯 = f_pre ≥ 0.5×f_post；无 pre 则 f_step = f_post 并注明“未扣背景”）；
       - PAP 曲线：全部 post 行（跨档合并、按 c 池化）拟合一条尾部——
         拟合残差本身就是平稳补充假设的审计（出 CI 的点报警）；
-        频率 ≥ 0.5 的饱和行不进拟合（对尾部无信息）[约定]；
+        频率 ≥ sat_f 的饱和行不进拟合（对尾部无信息）[约定]；
+        sat_f 是显式参数（默认 0.5 = "长到与未处理相当"），写进报告；
+        落在阈值 ±20% 相对带内的点单独标出（分类对阈值敏感）；
       - 当前位置 c_now = 有实测 f_post ≥ 0.5 的最高浓度（--c-start 可覆盖）；
       - 剩余梯级：从 c_now 到 c_target 按可行最大步长均匀分档；
-        累计乘客 = 已完成档基数（每档 n_win×M_on + n_plate×M_off，[约定]按设计值）
-                   + 剩余档同式 + n_post×M_off（只计一次）；
+        累计乘客 = 已完成档基数（每档 n_win×M_on + n_plate×M_off + 洗脱尾，[约定]按设计值）
+                   + 剩余档同式 + n_post×M_off + 洗脱尾（只计一次）；
+        洗脱尾见 `washout_tail`（需 --tau-off-h 与 --td 同时给）；
       - 失守概率 = 1 − exp(−E[P_总] × L_prot/G)（总乘客单次代入）。
     """
     if not records:
         raise ValueError("账本没有任何记录——先完成一个窗口并铺板（pre/post）")
+    if not (0.0 < sat_f < 1.0):
+        raise ValueError(f"sat_f={sat_f!r} 必须在 (0, 1) 之间——"
+                         "它是\"频率多高算饱和\"的阈值")
     cycles = sorted({str(r[0]) for r in records},
                     key=lambda s: (0, int(s)) if s.isdigit() else (1, s))
 
@@ -365,7 +424,7 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
             else:
                 pk, pn = _pool([r for r in rows if r[0] == "post"])
                 f_post = wilson_ci(int(pn), pk)          # (克隆数, CFU)
-                entry.update(f_post=f_post, saturated=(f_post[0] >= 0.5))
+                entry.update(f_post=f_post, saturated=(f_post[0] >= sat_f))
                 if has_pre:
                     qk, qn = _pool([r for r in rows if r[0] == "pre"])
                     f_pre = wilson_ci(int(qn), qk)       # (克隆数, CFU)
@@ -383,14 +442,17 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
     # ---- ② 当前位置 + PAP 拟合（平稳性审计）----
     post_pts = [(e["c"], e["clones_post"], e["cfu_post"])
                 for e in f_by_cc.values()]
-    saturated = [(c, k, n) for c, k, n in post_pts if k / n >= 0.5]
-    tail = [(c, k, n) for c, k, n in post_pts if k / n < 0.5]
+    saturated = [(c, k, n) for c, k, n in post_pts if k / n >= sat_f]
+    tail = [(c, k, n) for c, k, n in post_pts if k / n < sat_f]
+    # 阈值边界带：分类对 sat_f 敏感的点单独标出（±20% 相对）
+    near_sat = [(c, k / n) for c, k, n in post_pts
+                if 0.8 * sat_f <= k / n < 1.2 * sat_f]
     if c_start is not None:
         c_now, c_now_source = float(c_start), "--c-start 显式指定"
     else:
-        cand = [c for c, k, n in post_pts if k / n >= 0.5]
+        cand = [c for c, k, n in post_pts if k / n >= sat_f]
         if cand:
-            c_now, c_now_source = max(cand), "账本中 f_post ≥ 0.5 的最高浓度"
+            c_now, c_now_source = max(cand), f"账本中 f_post ≥ {sat_f:g} 的最高浓度"
         elif tail:
             c_now, c_now_source = min(c for c, _, _ in tail), "最低尾部分档（无饱和点，弱证据）"
         else:
@@ -408,11 +470,15 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
                          key=lambda s: (0, int(s)) if s.isdigit() else (1, s))
     # ⚠ 与 mtblocks.window_table_f_step 的乘客口径同源——改这里要同步改那里，
     #   并跑 tests/test_ledger_formula_pin.py（docs/multitarget-code-map.md §6）
-    base = len(done_cycles) * (n_win * m_on + n_plate * (m_off if m_off is not None else 0.0))
+    p_tail = washout_tail(m_on, m_off, tau_off_h, td_h)
+    base = len(done_cycles) * (n_win * m_on
+                               + n_plate * (m_off if m_off is not None else 0.0)
+                               + p_tail)
     plan = plan_ramp(fit, m_on=m_on, k=k, capacity=capacity,
                      c_start=c_now, c_target=c_target, genome_mb=genome_mb,
                      m_off=m_off, n_win=n_win, n_plate=n_plate, n_post=n_post,
-                     bgc_kb=bgc_kb, margin=margin, cum_base=base)
+                     bgc_kb=bgc_kb, margin=margin, cum_base=base,
+                     tau_off_h=tau_off_h, td_h=td_h)
     plan["fit"] = fit
     plan["c_now"] = c_now
     plan["c_now_source"] = c_now_source
@@ -420,6 +486,9 @@ def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
     plan["base_passengers"] = base
     plan["cycle_table"] = cycle_table
     plan["saturated_excluded"] = saturated
+    plan["sat_f"] = float(sat_f)
+    plan["near_sat"] = near_sat
+    plan["p_tail"] = p_tail
     plan["nt"] = nt
 
     # ---- ④ 下一窗设计（用最新实测 f_step 优先，曲线预测并列）----
@@ -464,7 +533,8 @@ def render_ledger(plan: dict) -> str:
 
     L.append("二、PAP 曲线现状（平稳补充假设的审计）")
     fit = plan["fit"]
-    L.append(f"  正克隆点 {fit['n_pos']}（饱和剔除 {len(plan['saturated_excluded'])}）"
+    L.append(f"  正克隆点 {fit['n_pos']}（饱和剔除 {len(plan['saturated_excluded'])}，"
+             f"阈值 f ≥ {plan.get('sat_f', 0.5):g}）"
              f" | f_ref(c={fit['c_ref']:g}) = {fit['f_ref']:.2e}"
              f" | δ = {fit['delta']:.3g} /十倍频")
     if fit.get("delta_ci"):
@@ -474,6 +544,9 @@ def render_ledger(plan: dict) -> str:
         L.append("  ⚠ 正克隆点 <3：δ 无 CI——下档多涂浓度板补点")
     for fl in fit.get("flags", []):
         L.append(f"  ⚠ {fl}")
+    for c, fr in plan.get("near_sat", []):
+        L.append(f"  ⚠ c={c:g} 的 f={fr:.2f} 落在饱和阈值 ±20% 带内——"
+                 "换个阈值它就会进出拟合，本档分类不稳，建议补点")
     L.append(f"  当前位置 c_now = {plan['c_now']:g}（{plan['c_now_source']}）")
     L.append("")
 
@@ -521,6 +594,13 @@ def render_ledger(plan: dict) -> str:
     tot = plan["p_total"]
     L.append(f"  总乘客 E[P] = {tot:.2f}（已完成档基数 {plan['base_passengers']:.2f}"
              f" + 剩余梯级 {tot - plan['base_passengers']:.2f}）")
+    p_tail = plan.get("p_tail", 0.0)
+    if p_tail:
+        L.append(f"  其中洗脱尾 = {p_tail:.2f}/档×次（τ_off = {plan['tau_off_h']:g} h，"
+                 f"td = {plan['td_h']:g} h；每次洗脱计一次：已完成档 + 每剩余档 + 终点后）")
+    elif plan.get("tau_off_h") is None:
+        L.append("  ⚠ 未给 --tau-off-h/--td：洗脱尾**未计入**——它与板内段同量级，"
+                 "漏掉会低估每档乘客（见 docs/protocol-ramp.md §3.4）")
     if plan["p_bgc"] is not None:
         L.append(f"  保护区（{plan['bgc_kb']:g} kb）失守 = 1 − exp(−E[P]×L/G) "
                  f"= {plan['p_bgc']:.2%}（总乘客单次代入，不是每档相加）")

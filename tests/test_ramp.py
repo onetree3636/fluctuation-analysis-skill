@@ -157,12 +157,13 @@ def test_cli_smoke(tmp_path, capsys):
                    "1,4,post,3.0e8,3\n2,3,pre,3.0e8,1\n2,3,post,3.0e8,40\n"
                    "2,4,post,3.0e8,8\n2,5,post,3.0e8,0\n", encoding="utf-8")
     mk = tmp_path / "mk.csv"
-    mk.write_text("marker,mu,teff_bp\nrpoB,1.51e-7,7\n", encoding="utf-8")
+    mk.write_text("marker,mu,teff_bp\nmarkerA,1.0e-7,10\n", encoding="utf-8")
     from windowcalc.cli import cmd_multitarget
     args = argparse.Namespace(
-        records=str(pap), markers=str(mk), genome_mb=7.5, m_off=8.7e-3,
-        n_win=4.0, n_plate=27.0, n_post=4.0, k=30.0, capacity=3e8,
-        c_target=5.0, bgc_kb=83.0, margin=3.0, c_start=None, nt=None,
+        records=str(pap), markers=str(mk), genome_mb=5.0, m_off=0.01,
+        n_win=4.0, n_plate=12.0, n_post=4.0, k=30.0, capacity=3e8,
+        c_target=5.0, bgc_kb=40.0, margin=3.0, c_start=None, nt=None,
+        sat_f=0.5, tau_off_h=None, td=None,
         json=False, out=None)
     assert cmd_multitarget(args) == 0
     out = capsys.readouterr().out
@@ -172,10 +173,11 @@ def test_cli_smoke(tmp_path, capsys):
 
 def test_cli_refusal_lists_missing(tmp_path):
     mk = tmp_path / "mk.csv"
-    mk.write_text("marker,mu,teff_bp\nrpoB,1.51e-7,7\n", encoding="utf-8")
+    mk.write_text("marker,mu,teff_bp\nmarkerA,1.0e-7,10\n", encoding="utf-8")
     from windowcalc.cli import cmd_multitarget
     args = argparse.Namespace(records=None, markers=str(mk), genome_mb=None,
                               m_off=None, n_win=None, n_plate=0.0, n_post=0.0,
+                              sat_f=0.5, tau_off_h=None, td=None,
                               k=None, capacity=None, c_target=None,
                               bgc_kb=None, margin=3.0, c_start=None, nt=None,
                               json=False, out=None)

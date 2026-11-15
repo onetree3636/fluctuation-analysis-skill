@@ -1213,7 +1213,8 @@ def cmd_multitarget(args) -> int:
                       n_plate=args.n_plate or 0.0, n_post=args.n_post or 0.0,
                       k=args.k, capacity=args.capacity,
                       c_target=args.c_target, bgc_kb=args.bgc_kb,
-                      margin=args.margin, c_start=args.c_start, nt=args.nt)
+                      margin=args.margin, c_start=args.c_start, nt=args.nt,
+                      sat_f=args.sat_f, tau_off_h=args.tau_off_h, td_h=args.td)
     plan["version"] = __version__
     plan["calibration"] = cal
     text = render_ledger(plan)
@@ -1401,6 +1402,14 @@ def build_parser() -> argparse.ArgumentParser:
                        help="要保护的区域大小 kb（给了才报累计失守概率）")
     ap_mt.add_argument("--margin", type=float, default=3.0,
                        help="每档可行性安全倍数（默认 3.0：预测克隆数 ≥ 3×k 才开档）")
+    ap_mt.add_argument("--sat-f", type=float, default=0.5,
+                       help="饱和阈值：f_post ≥ 该值视为饱和、不进 PAP 尾部拟合"
+                            "（默认 0.5 = 长到与未处理相当；±20%% 带内的点会被标出）")
+    ap_mt.add_argument("--tau-off-h", type=float, default=None,
+                       help="洗脱尾的衰变时间常数（h）。**与 --td 同时给**才计尾；"
+                            "只给一个会报错（本技能不内置默认值）")
+    ap_mt.add_argument("--td", type=float, default=None,
+                       help="倍增时间（h），洗脱尾按\"每代 td 小时\"离散折算")
     ap_mt.add_argument("--c-start", type=float, default=None,
                        help="覆盖当前位置（默认从账本推断：f_post ≥ 0.5 的最高浓度）")
     ap_mt.add_argument("--json", action="store_true", help="输出 JSON")

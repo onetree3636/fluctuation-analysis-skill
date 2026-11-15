@@ -131,3 +131,108 @@ def test_ladder_cumulative_matches_three_segment_ledger():
     # 总乘客：基数 + 剩余梯级 + n_post（只一次）
     assert plan["p_total"] == pytest.approx(
         base + len(ladder) * per_rung + n_post * m_off, rel=1e-12)
+
+
+# ---------------------------------------------------------------- 4. 洗脱尾（2026-11-15 新增）
+
+def test_washout_tail_closed_form():
+    """tail = (M_on − M_off)/(e^(td/τ) − 1)：按"每代 td 小时"的离散求和。"""
+    from windowcalc.ramp import washout_tail
+    m_on, m_off, tau, td = 0.2, 0.01, 5.0, 3.0
+    assert washout_tail(m_on, m_off, tau, td) == pytest.approx(
+        (m_on - m_off) / math.expm1(td / tau), rel=1e-12)
+    # 都不给 → 0（报告里会注明"未计入"）
+    assert washout_tail(m_on, m_off, None, None) == 0.0
+
+
+def test_washout_tail_continuous_limit():
+    """td ≪ τ 时退化为 (M_on−M_off)·τ/td，与 fit_tauoff 的尾部积分同口径。"""
+    from windowcalc.ramp import washout_tail
+    m_on, m_off, tau, td = 0.2, 0.01, 1.0e4, 1.0
+    # 离散和与连续积分差一个 e^x/(e^x−1) 因子，x=td/τ≪1 时 ≈ 1 + x/2
+    assert washout_tail(m_on, m_off, tau, td) == pytest.approx(
+        (m_on - m_off) * tau / td, rel=1e-3)
+    assert washout_tail(m_on, m_off, tau, td) < (m_on - m_off) * tau / td
+
+
+def test_washout_tail_requires_both_parameters():
+    from windowcalc.ramp import washout_tail
+    with pytest.raises(ValueError, match="同时"):
+        washout_tail(0.2, 0.01, 5.0, None)
+    with pytest.raises(ValueError, match="同时"):
+        washout_tail(0.2, 0.01, None, 3.0)
+
+
+def test_ledger_counts_tail_once_per_washout():
+    """每次洗脱计一次：已完成档基数 + 每剩余档 + 终点后。"""
+    from windowcalc.ramp import washout_tail
+    w = window_table_f_step(MK, f_step=F_STEP, k=K, nt=NT, genome_mb=GENOME_MB)
+    m_on, m_off = w["m_genome"], 0.01
+    n_win, n_plate, n_post = 4.0, 2.0, 3.0
+    tail = washout_tail(m_on, m_off, 5.0, 3.0)
+
+    plan = run_ledger(_records_one_cycle(), m_on=m_on, m_off=m_off,
+                      genome_mb=GENOME_MB, n_win=n_win, n_plate=n_plate,
+                      n_post=n_post, k=K, capacity=1.0e9, c_target=10.0,
+                      bgc_kb=None, margin=3.0, tau_off_h=5.0, td_h=3.0)
+    assert plan["p_tail"] == pytest.approx(tail, rel=1e-12)
+    # 基数含尾
+    assert plan["base_passengers"] == pytest.approx(
+        n_win * m_on + n_plate * m_off + tail, rel=1e-12)
+    # 每档含尾
+    for r in plan["ladder"]:
+        assert r["p_tail"] == pytest.approx(tail, rel=1e-12)
+        assert r["passengers"] == pytest.approx(
+            n_win * m_on + n_plate * m_off + tail, rel=1e-12)
+    # 总账 = 基数 + 剩余档 + 终点后段（含尾）
+    assert plan["p_total"] == pytest.approx(
+        plan["base_passengers"]
+        + len(plan["ladder"]) * (n_win * m_on + n_plate * m_off + tail)
+        + n_post * m_off + tail, rel=1e-12)
+
+
+# ---------------------------------------------------------------- 5. 饱和阈值
+
+def _records_with_a_borderline_point():
+    """一个点正好落在 0.6——阈值 0.5 时是饱和、0.7 时进尾部拟合。"""
+    return [
+        ("1", 1.0, "post", 1.0e9, int(6.0e8)),   # f = 0.6（边界点）
+        ("1", 2.0, "post", 1.0e9, 1000),         # f = 1e-6
+        ("1", 3.0, "post", 1.0e9, 100),          # f = 1e-7
+    ]
+
+
+def test_saturation_threshold_is_a_parameter_not_a_hardcode():
+    w = window_table_f_step(MK, f_step=F_STEP, k=K, nt=NT, genome_mb=GENOME_MB)
+    common = dict(m_on=w["m_genome"], m_off=None, genome_mb=GENOME_MB,
+                  n_win=4.0, n_plate=0.0, n_post=0.0, k=K, capacity=1.0e9,
+                  c_target=10.0, bgc_kb=None, margin=3.0)
+
+    p5 = run_ledger(_records_with_a_borderline_point(), sat_f=0.5, **common)
+    assert p5["sat_f"] == 0.5
+    assert [c for c, _, _ in p5["saturated_excluded"]] == [1.0]   # 0.6 被当饱和
+    assert p5["fit"]["n_pos"] == 2                                # 只剩 2 个尾点
+
+    p7 = run_ledger(_records_with_a_borderline_point(), sat_f=0.7, **common)
+    assert p7["sat_f"] == 0.7
+    assert p7["saturated_excluded"] == []                          # 0.6 不再是饱和
+    assert p7["fit"]["n_pos"] == 3                                 # 进拟合，且有 CI
+    assert p7["fit"]["delta_ci"] is not None
+    # 边界带标注：0.6 落在 0.7 的 ±20% 带内
+    assert any(abs(c - 1.0) < 1e-12 for c, _ in p7["near_sat"])
+
+
+def test_saturation_threshold_validation():
+    with pytest.raises(ValueError, match="sat_f"):
+        run_ledger(_records_one_cycle(), m_on=0.1, m_off=None, genome_mb=GENOME_MB,
+                   n_win=4.0, n_plate=0.0, n_post=0.0, k=K, capacity=1.0e9,
+                   c_target=10.0, bgc_kb=None, margin=3.0, sat_f=1.0)
+
+
+def test_delta_ci_brackets_point_estimate():
+    """δ 的 95%CI 必须满足 lo < δ < hi（2026-11-15 修过一处上下颠倒）。"""
+    from windowcalc.ramp import fit_pap
+    fit = fit_pap([(2, 3000, 3e8), (3, 300, 3e8), (4, 45, 3e8), (5, 3, 3e8)])
+    lo, hi = fit["delta_ci"]
+    assert lo < fit["delta"] < hi
+    assert fit["delta"] == pytest.approx(-1.0 / fit["slope"], rel=1e-12)

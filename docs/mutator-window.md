@@ -60,7 +60,7 @@ q 与 ΔM 不可分（`two_core` 下 q 弱可辨），所以**不要**把 Δsat 
 2. **95% 饱和剂量**——报告会直接标"当前剂量处于 X% 饱和"。
 
 ```bash
-windowcalc fit-induction --input 剂量.csv --m-off 0.012 --query 0.05 0.5 5
+windowcalc fit-induction --input 剂量.csv --m-off <M_off> --query 0.05 0.5 5
 ```
 
 ## 3. 三个旋钮与约束
