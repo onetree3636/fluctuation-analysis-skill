@@ -10,20 +10,21 @@
 
 ```bash
 cd 技能目录
-python selftest.py            # 27 项，约 40–100 s
+python selftest.py            # 28 项，约 40–100 s
 python selftest.py --quick    # 只查环境与命令（约 2 s）
 ```
 
 自检覆盖：环境 → **入口自举（`run.py --doctor`）** → **Agent Skills 规范** → 9 个子命令 → **Excel 与 CSV 结果一致** → 4 组**已知答案**（R&F 2000 文献值、部分涂板、LRT/θ、样本量）
 → 端到端（optimize 报告章节、fit 参数回收）→ 错误路径（坏数据/YAML 都不甩 traceback）→
-文档（断链、命令是否存在、四个用途入口、**文档里的数字与代码是否一致**）。
+文档（断链、命令是否存在、四个用途入口、**文档里的数字与代码是否一致**）→
+**护栏**（§0 正向：每个子命令都有护栏；反向：每个 G 编号都挂在某一行，无孤儿规则）。
 
 使用者日常只需 `python3 run.py --doctor`（2 s，查环境）；`selftest.py` 是深度验证，发布前 / 换机器后跑。
 
-**在哪跑 selftest**：全量 22 项在**部署副本**（`~/.agents/skills/fluctuation-analysis/`）里跑——
+**在哪跑 selftest**：全量在**部署副本**（`~/.agents/skills/fluctuation-analysis/`）里跑——
 入口文件（run.py/bootstrap.py）按设计只在副本（见 `sync_skill.sh`「不同步」清单）。
-在项目源目录跑会显示「21 通过，1 跳过」——`[SKIP]` 是设计行为（入口项与 name=目录名
-检查需要入口文件存在才有意义），不是失败。
+在项目源目录跑会显示一项 `[SKIP]`——入口项与 name=目录名检查需要入口文件存在才有意义，
+不是失败（这里**不写具体项数**，免得每次加检查就漂一次）。
 
 ## 0.1 规范校验（Agent Skills 开放标准）
 

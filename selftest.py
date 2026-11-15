@@ -508,6 +508,34 @@ def _():
     assert not (used - defined), f"§0 引用了没定义的 G 编号：{sorted(used - defined, key=int)}"
 
 
+@check("护栏：每个 G 编号都挂在 §0 某一行（反向覆盖，防孤儿规则）")
+def _():
+    """上一条只保证"命令都有护栏"，反向仍会漏：规则写了、编号有定义，
+    却不在 §0 任何一行——agent 按 §0 查表时**永远碰不到它**，等于没写。
+
+    2026-11-15 实测正是如此：**G26**（用户只有 F、没有 f_step）与 **G27**
+    （"多靶点耐药快几倍"→ 这是研究问题，不答）定义了却从未被任何命令引用；
+    G27 还是条边界规则，漏了就会直接答越界问题。
+    """
+    import re as _re
+    text = (ROOT / "references" / "guardrails.md").read_text(encoding="utf-8")
+    head = text.split("## 1.")[0]                          # §0 命令表（含表下注解）
+    defined = set(_re.findall(r"^\|\s*\*\*G(\d{1,2})\*\*", text, _re.M))
+    used = set(_re.findall(r"\bG(\d{1,2})\b", head))
+    orphans = sorted(defined - used, key=int)
+    assert not orphans, (
+        "这些 G 编号定义了但不在 §0 任何一行（孤儿规则）："
+        + "、".join(f"G{o}" for o in orphans) + "\n"
+        "  后果：agent 按 §0 查表时永远查不到它，等于没写。\n"
+        "  修法：在 §0 对应命令的「必查 / 条件触发」列加上它；全局规则放 `**任意命令**` 行。")
+    row_any = _re.search(r"^\|\s*\*\*任意命令\*\*.*$", head, _re.M)
+    assert row_any, "§0 缺 `**任意命令**` 行——全局规则（边界问题）没有落点"
+    assert _re.search(r"\bG\d{1,2}\b", row_any.group(0)), \
+        "`**任意命令**` 行没挂任何 G 编号"
+    assert "G27" in row_any.group(0), \
+        "G27（问到边界问题就不答）是全局规则，必须挂在 `任意命令` 行"
+
+
 @check("文档：分级横幅齐全、索引存在（docs/INDEX.md）")
 def _():
     """2026-11-15 的"减法"：文档只能有一个入口。
