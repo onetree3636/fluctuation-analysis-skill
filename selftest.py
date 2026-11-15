@@ -399,6 +399,32 @@ GENERIC_BANNED = [
 ]
 
 
+@check("护栏：每个子命令都在 guardrails §0，且引用的 G 编号都有定义")
+def _():
+    """2026-11-15 的"护栏三元组化"：命令 ↔ 触发编号必须双向对得上。
+
+    新加子命令却没配护栏 = 用户会在没人问的情况下踩坑；引用不存在的 G 编号 = 悬空规则。
+    """
+    import re as _re
+    sys.path.insert(0, str(ROOT))
+    from windowcalc.cli import build_parser
+
+    ap = build_parser()
+    subs = set(next(a for a in ap._actions if a.dest == "cmd").choices)
+
+    text = (ROOT / "references" / "guardrails.md").read_text(encoding="utf-8")
+    head = text.split("## 1.")[0]                     # §0 命令表
+    listed = {m.group(1) for m in _re.finditer(r"^\|\s*`([a-z-]+)`", head, _re.M)}
+    missing = subs - listed
+    extra = listed - subs
+    assert not missing, f"guardrails §0 缺这些子命令：{sorted(missing)}"
+    assert not extra, f"guardrails §0 列了不存在的子命令：{sorted(extra)}"
+
+    used = set(_re.findall(r"\bG(\d{1,2})\b", head))
+    defined = set(_re.findall(r"^\|\s*\*\*G(\d{1,2})\*\*", text, _re.M))
+    assert not (used - defined), f"§0 引用了没定义的 G 编号：{sorted(used - defined, key=int)}"
+
+
 @check("文档：分级横幅齐全、索引存在（docs/INDEX.md）")
 def _():
     """2026-11-15 的"减法"：文档只能有一个入口。
