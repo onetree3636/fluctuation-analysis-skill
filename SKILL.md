@@ -151,6 +151,9 @@ mutator 会改道（pbio.3001878）——单步效应按实测走，文献只定
 - `docs/protocol-fstep.md`：**f_step 铺板规程**（配对设计、板量倒推、Wilson CI、背景扣除——多靶点主路径的实验侧，按文献/推导/约定三级标注）。
 - `docs/generic-policy.md`：**通用性政策**——药物名只许来自引用文献、默认值只许来自文献确证的通用值；
   三类载体的写法、自动守卫、新增内容五问。
+- `docs/figures/`：**三张符号化配图**（都不含任何数值，生成脚本同目录、可复现）——
+  `cycle-liquid-propagation.png`（一个周期长什么样）· `propagation-topologies.png`（板传代 vs 液传代）·
+  `decide-plating-and-timing.png`（涂多少 / 何时能接下一档）。
 - `docs/figures/cycle-liquid-propagation.png`：**周期示意（一张图）**——液传代 + 涂板审计的时间轴、
   四段乘客账（只标公式）、五处去向与四条红线。**图中不含任何数值**（通用性政策）。
   用户问“一个浓度周期长什么样 / 涂板还是液传代怎么排”时，展示这张图并按 `docs/protocol-execution.md` 解读。

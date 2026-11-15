@@ -49,6 +49,10 @@
 | 档间扩增代数 | 板传代 ≈ `log₂(每克隆细胞数)`；液传代 = `log₂(N₀/(f×Nt))` | §7.1 |
 | 板量 | ≈6 块/档（共用板 2 + CFU 分母 3 + 备份 1） | §2.5 |
 
+**两个决策画成一张图**（`figures/decide-plating-and-timing.png`，同样不含数值）：
+
+![两个决策](figures/decide-plating-and-timing.png)
+
 **一句话结论**：涂板是**抽样测量**，不是**转移**；传代靠**液体**；两者同时开跑，板回来只当审计。
 
 ---
@@ -253,6 +257,10 @@ c_{N+1} 板：10⁵ CFU ×1 块、10⁶ ×1 块、10⁷ ×1 块
                  → 长到 N₀ → 开下一窗
         └ 5% 涂 c_{N+1} 板（只数，不刮）→ 板读出来→ f_step 回填账本
 ```
+
+**流程与判据对照**（`figures/propagation-topologies.png`）：
+
+![两种传代拓扑](figures/propagation-topologies.png)
 
 ### 4.2 对比表
 

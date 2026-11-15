@@ -337,7 +337,11 @@ def _():
               "examples/raw_counts_template.csv",
               "docs/generic-policy.md", "docs/protocol-execution.md",
               "docs/figures/cycle-liquid-propagation.png",
-              "docs/figures/make_cycle_schematic.py"):
+              "docs/figures/make_cycle_schematic.py",
+              "docs/figures/propagation-topologies.png",
+              "docs/figures/make_propagation_topologies.py",
+              "docs/figures/decide-plating-and-timing.png",
+              "docs/figures/make_decision_flow.py"):
         assert (ROOT / f).exists(), f"缺 {f}"
 
 
