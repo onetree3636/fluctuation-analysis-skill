@@ -33,7 +33,7 @@ markers.csv ─┼→ cmd_multitarget (cli.py:1157)
 | 文件 | 行数 | 角色 | 关键入口 |
 |---|---|---|---|
 | `windowcalc/ramp.py` | 600+ | **主引擎**：账本 → 现状 → 规划 | `run_ledger` · `fit_pap` · `plan_ramp` · `washout_tail` (139) · `render_ledger` |
-| `windowcalc/fstep.py` | 101 | 比例估计的数学底座 | `wilson_ci` (23) · `newcombe_diff` (43) |
+| `windowcalc/fstep.py` | 55 | 纯算术：比例区间 | `wilson_ci` · `newcombe_diff`（2026-11-15 删掉单步引擎 `run_step`/`render`） |
 | `windowcalc/mtblocks.py` | 162 | 标定积木（B1 / B5 / B6） | `mu_perbp` (66) · `minimal_n0` (95) · `window_table_f_step` (118) |
 | `windowcalc/induction.py` | 301 | 剂量轴机制模型 → `M_on(c)` | `fit_induction` (197) · `psi` (49) |
 | `windowcalc/fitting.py` | 279 | 剂量-响应 Hill、洗脱衰变 | `fit_tau_off` (204) · `hill_fc` (28) |

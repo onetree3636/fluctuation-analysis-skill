@@ -5,7 +5,7 @@ import math
 
 import pytest
 
-from windowcalc.ramp import fit_pap, plan_ramp, predict_f, render
+from windowcalc.ramp import fit_pap, plan_ramp, predict_f, render_ledger
 
 
 def _synth():
@@ -132,8 +132,6 @@ def test_plan_refuses_bad_args():
 def test_plan_m_off_absent_is_flagged():
     plan = _plan(m_off=None)
     assert plan["m_off_counted"] is False
-    out = render(plan)
-    assert "未给 --m-off" in out and "未计入" in out
 
 
 def test_plan_flags_extrapolation_beyond_pap():
@@ -143,12 +141,6 @@ def test_plan_flags_extrapolation_beyond_pap():
 
 
 # ---------------------------------------------------------------- 渲染 / CLI
-
-def test_render_contains_sections_and_numbers():
-    out = render(_plan())
-    for key in ("PAP 尾部拟合", "梯级规划", "累计账", "怎么读", "0.92", "83"):
-        assert key in out or key.replace(".92", "") in out
-
 
 def _mt_args(tmp_path, **over):
     """构造 cmd_multitarget 的 Namespace（默认值全部显式，便于逐个覆盖）。"""
@@ -239,3 +231,38 @@ def test_cli_refusal_lists_missing(tmp_path):
                               json=False, out=None)
     with pytest.raises(ValueError, match="不会用默认值代替"):
         cmd_multitarget(args)
+
+
+def test_ledger_red_flag_on_background():
+    """f_pre ≥ 0.5×f_post → 背景淹没红灯（原 run_step 的这条行为测试已迁到这里）。"""
+    from windowcalc.ramp import run_ledger
+    recs = [("1", 1.0, "pre", 1e9, 10), ("1", 1.0, "post", 1e9, 12),
+            ("1", 2.0, "post", 1e9, 1), ("1", 3.0, "post", 1e9, 1)]
+    plan = run_ledger(recs, m_on=0.1, m_off=0.01, genome_mb=5.0, n_win=4.0,
+                      n_plate=0.0, n_post=0.0, k=1.0, capacity=3e8,
+                      c_target=5.0, bgc_kb=None, margin=1.0, c_start=1.0)
+    e = next(x for x in plan["cycle_table"] if x["c"] == 1.0)
+    assert e["red"] is True
+    assert e["f_step"] == pytest.approx(max(0.0, e["f_post"][0] - e["f_pre"][0]))
+    out = render_ledger(plan)
+    assert "背景淹没" in out
+
+
+def test_report_warns_single_marker_unverified(tmp_path, capsys):
+    """1 个标记 → 报告必须说"均匀假设未检验"（spread 是退化值，不能当通过）。"""
+    from windowcalc.cli import cmd_multitarget
+    mk = tmp_path / "mk1.csv"
+    mk.write_text("marker,mu,teff_bp\nA,1.0e-7,10\n", encoding="utf-8")
+    assert cmd_multitarget(_mt_args(tmp_path, markers=str(mk), m_on=None)) == 0
+    out = capsys.readouterr().out
+    assert "未检验" in out and "1 个标记" in out
+
+
+def test_report_flags_inconsistent_markers(tmp_path, capsys):
+    """2 个标记、离散 4× → 报告必须打红（不能静默当均匀）。"""
+    from windowcalc.cli import cmd_multitarget
+    mk = tmp_path / "mk2.csv"
+    mk.write_text("marker,mu,teff_bp\nA,1.0e-7,10\nB,4.0e-7,10\n", encoding="utf-8")
+    assert cmd_multitarget(_mt_args(tmp_path, markers=str(mk), m_on=None)) == 0
+    out = capsys.readouterr().out
+    assert "跨标记离散 4.00" in out and "❌" in out and "0.40" in out

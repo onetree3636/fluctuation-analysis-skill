@@ -64,13 +64,13 @@ description ≤1024、compatibility ≤500、frontmatter 无未知键、SKILL.md
 
 ## 2. L1 引擎单测
 
-128 项，覆盖：MSS 递推 vs 复合泊松、R&F 2000 验收、profile CI、逐管 Nt、部分涂板
+196 项，覆盖：MSS 递推 vs 复合泊松、R&F 2000 验收、profile CI、逐管 Nt、部分涂板
 （与显式二项混合逐点对拍 + rSalvador golden 值）、LRT/θ、样本量解析 vs 模拟、拟合退化保护，
 以及**跨模块不变量**（MC 中位数≈点估计、decay 相位计入负荷与供给、报告恒等式、坏卡片被拦）。
 
 ```bash
 cd <项目源>/window-calculator          # 仅维护者本机有；使用者不必跑 L1
-python3 -m pytest tests/ -q          # 128 passed，约 3.5 分钟
+python3 -m pytest tests/ -q          # 196 passed，约 2 分钟
 ```
 
 ## 3. L2 技能自检（重点）

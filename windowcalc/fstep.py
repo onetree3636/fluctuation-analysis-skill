@@ -1,10 +1,10 @@
-"""fstep：铺板记录 → 可粘贴的升档供给频率 f_step（含 Wilson / Newcombe 区间）。
+"""fstep：比例估计的两个数学底座（Wilson 区间 + Newcombe 差值）。
 
-输入：每 (cycle, c) 的 pre/post 板计数（multitarget --records 的账本行，
-schema 见 examples/records_template.csv：cycle,c,when,cfu,clones）。
-when ∈ {pre, post}：pre = 该窗**前**铺的该浓度板（背景）；
-                    post = 该窗**后**铺的该浓度板（升档频率）。
-（2026-11-14 起 fstep 子命令并入 multitarget，本模块作为其逐档引擎保留。）
+**本模块只做算术，不碰数据**——pre/post 的配对、多板池化、背景扣除、
+红旗判定全部在 `ramp.run_ledger` 里（账本解释器，唯一实跑路径）。
+（2026-11-15 删除了 `run_step()` / `render()`：它们是 fstep 子命令时代的
+单步引擎，自 2026-11-14 并入 `multitarget` 后已无生产调用者，
+其行为测试已迁到 `tests/test_ledger_formula_pin.py` 的 run_ledger 用例。）
 
 方法（文献）：
   - 单比例 95%CI：Wilson（Wilson 1927, JASA 22:209；小样本下优于正态近似：
@@ -12,7 +12,7 @@ when ∈ {pre, post}：pre = 该窗**前**铺的该浓度板（背景）；
     k=0 用 rule of three：95% 上界 = 3/n（Hanley & Lippman-Hand 1983, JAMA 249:1743）。
   - 两比例之差（f_post − f_pre）：Newcombe (1998) 法 10——由两个 Wilson 区间混合
     （Newcombe, Statist. Med. 17:873）。
-红灯（docs/protocol-fstep.md §3）：f_pre ≥ 0.5 × f_post → 背景淹没，本档不可用。
+红灯口径（docs/protocol-fstep.md §3）：f_pre ≥ 0.5 × f_post → 背景淹没，本档不可用。
 """
 
 from __future__ import annotations
@@ -53,49 +53,3 @@ def newcombe_diff(post: tuple[float, float, float],
     hi = d + math.sqrt((u2 - p2) ** 2 + (p1 - l1) ** 2)
     return d, max(-1.0, lo), min(1.0, hi)
 
-
-def run_step(step: str, plates: list[tuple[str, float, int]]) -> dict:
-    """一个 step 的全部板 → f_pre / f_post / f_step（扣背景）与判定。
-
-    plates: [(when, cfu_plated, clones), ...]；when ∈ {"pre", "post"}。
-    """
-    def pool(w: str) -> tuple[int, int]:
-        sel = [(c, k) for w_, c, k in plates if w_ == w]
-        if not sel:
-            raise ValueError(f"step {step} 缺 when={w!r} 的板（配对设计两边都要铺）")
-        return sum(c for c, _ in sel), sum(k for _, k in sel)
-
-    n1, k1 = pool("pre")
-    n2, k2 = pool("post")
-    f_pre = wilson_ci(k1, n1)
-    f_post = wilson_ci(k2, n2)
-    d, dlo, dhi = newcombe_diff(f_post, f_pre)
-    f_step = max(0.0, d)
-    red = (f_pre[0] >= 0.5 * f_post[0]) if f_post[0] > 0 else False
-    return dict(step=step, k_pre=k1, n_pre=n1, f_pre=f_pre,
-                k_post=k2, n_post=n2, f_post=f_post,
-                f_step=f_step, ci=(dlo, dhi), red=red)
-
-
-def render(results: list[dict]) -> str:
-    """把各 step 的结果渲染成报告文本（含可粘贴的 --f-step 行）。"""
-    L: list[str] = []
-    for r in results:
-        p1, lo1, hi1 = r["f_pre"]
-        p2, lo2, hi2 = r["f_post"]
-        L.append(f"== step {r['step']} ==")
-        L.append(f"  f_pre  = {r['k_pre']} / {r['n_pre']:.3g} = {p1:.3g}"
-                 f"   95%CI [{lo1:.2g}, {hi1:.2g}]")
-        L.append(f"  f_post = {r['k_post']} / {r['n_post']:.3g} = {p2:.3g}"
-                 f"   95%CI [{lo2:.2g}, {hi2:.2g}]（Wilson）")
-        L.append(f"  f_step = f_post − f_pre = {r['f_step']:.3g}"
-                 f"   Newcombe95 [{r['ci'][0]:.2g}, {r['ci'][1]:.2g}]")
-        if r["red"]:
-            L.append("  ⛔ 背景淹没：f_pre ≥ 0.5×f_post——本档不可用"
-                     "（先解决假抗性/交叉污染，protocol-fstep.md §3）")
-        elif r["f_step"] > 0:
-            L.append(f"  → 粘贴：--f-step {r['f_step']:.3g}")
-        else:
-            L.append("  → f_step ≤ 0：本步没有可用的升档供给（见上）")
-        L.append("")
-    return "\n".join(L)

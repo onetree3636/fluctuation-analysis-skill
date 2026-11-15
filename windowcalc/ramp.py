@@ -41,7 +41,7 @@ def fit_pap(points: Sequence[tuple[float, int, float]],
     """PAP 尾部拟合：log10 f = a + s·c（s < 0），δ = −1/s。
 
     points: (c, clones, cfu)——同一窗口后群体在各浓度的铺板计数；
-            同浓度多板自动合并（克隆数、CFU 分别求和，等价 run_step 的 pool）。
+            同浓度多板自动合并（克隆数、CFU 分别求和）。
     零克隆行：不进拟合，按 rule of three 记 3/CFU 上界（censored），
     拟合值高于上界的点会报警。
     返回含 slope/intercept/δ/CI/预测函数所需全部量的 dict。
@@ -351,70 +351,6 @@ def plan_ramp(fit: dict, *, m_on: float, k: float, capacity: float,
                 m_off_counted=(m_off is not None))
 
 
-# --------------------------------------------------------------------------- 渲染
-
-def render(plan: dict) -> str:
-    L: list[str] = []
-    fit = plan.get("fit", {})
-    L.append("一、PAP 尾部拟合（预测的锚点）")
-    if fit:
-        L.append(f"  f(c) = f_ref × 10^(−(c−c_ref)/δ)；正克隆点 {fit['n_pos']} 个，"
-                 f"零克隆上界行 {len(fit['censored'])} 条")
-        L.append(f"  f_ref(c={fit['c_ref']:g}) = {fit['f_ref']:.3g}"
-                 + (f"   δ = {fit['delta']:.3g} /十倍频" if fit.get("delta") else ""))
-        if fit.get("delta_ci"):
-            dlo, dhi = fit["delta_ci"]
-            L.append(f"  δ 95%CI [{dlo:.3g}, {dhi:.3g}]   R² = {fit['r2']:.3f}")
-        elif fit.get("n_pos", 0) < 3:
-            L.append("  ⚠ 正克隆点 <3：δ 的 CI 不可估——预测只有点值，"
-                     "下档实测后务必回填")
-        for fl in fit.get("flags", []):
-            L.append(f"  ⚠ {fl}")
-    else:
-        L.append("  （规划未带拟合明细）")
-    L.append("")
-    L.append("二、梯级规划")
-    if plan["status"] != "可行":
-        L.append(f"  ⛔ {plan['stuck_reason']}")
-        L.append("")
-        return "\n".join(L)
-    L.append(f"  可行最大步长 Δ = {plan['step']:.3g}"
-             f"（margin {plan['margin']:g}）→ {plan['n_rungs']} 档："
-             f"{plan['c_start']:g} → {plan['c_target']:g}")
-    L.append(f"  每档 f_step ≈ {plan['f_rung']:.3g}（平稳补充假设；每档实测后回填）")
-    L.append("")
-    L.append("  档   c_from→c_to        预测f_step     需CFU    乘客   累计    "
-             + ("BGC失守" if plan["bgc_kb"] else ""))
-    for r in plan["ladder"]:
-        bgc = f"{r['p_bgc']:.2%}" if r["p_bgc"] is not None else ""
-        L.append(f"  {r['i']:>2}   {r['c_from']:g}→{r['c_to']:<g}   "
-                 f"{r['f_step']:.2e}   {r['need_cfu']:8.3g}  {r['passengers']:.2f}  "
-                 f"{r['cum_passengers']:5.2f}   {bgc}")
-    L.append("")
-    L.append("三、累计账")
-    tot = plan["p_total"]
-    L.append(f"  总乘客 E[P] = {tot:.2f}（窗口 Σ{plan['n_win'] * plan['m_on']:.2f}"
-             f" + 板内 Σ{sum(r['p_plate'] for r in plan['ladder']):.2f}"
-             + (f" + 终点后 {plan['n_post'] * plan['m_off']:.2f}"
-                if plan["n_post"] > 0 and plan["m_off"] else "") + ")")
-    if plan["p_bgc"] is not None:
-        L.append(f"  保护区（{plan['bgc_kb']:g} kb）失守 = 1 − exp(−E[P]×L/G) "
-                 f"= {plan['p_bgc']:.2%}（总乘客单次代入，不是每档相加）")
-    if not plan["m_off_counted"]:
-        L.append("  ⚠ 未给 --m-off：窗口外段（板内扩张/终点后）**未计入**——"
-                 "本会话已证该项与窗口同量级，务必补测")
-    L.append("")
-    L.append("四、怎么读")
-    L.append("  - 预测锚在 PAP 实测曲线上，平稳补充假设会随机制天花板/谱系效应失效——")
-    L.append("    每档实测 f_step 后回填 --pap 重算；预测偏出 CI → 曲线重拟合")
-    L.append("  - 富余（surplus）大的档可评估**关诱导**：省 (M_on−M_off)×n_win/档"
-             "（先修泄漏，否则\"关\"也要付 M_off/M_base 的地板价）")
-    if plan.get("extrapolation_decades") is not None and plan["extrapolation_decades"] > 1:
-        L.append(f"  ⚠ 规划外推超出 PAP 实测范围约 {plan['extrapolation_decades']:.1f} 个 δ"
-                 "——远端档的预测最脆弱，优先实测")
-    return "\n".join(L)
-
-
 # --------------------------------------------------------------------------- 账本解释器
 
 def run_ledger(records: Sequence[tuple[str, float, str, float, int]], *,
@@ -594,6 +530,24 @@ def render_ledger(plan: dict) -> str:
     if plan.get("m_on_source") is not None:
         L.append(f"乘客速率 M_on = {plan.get('m_on', float('nan')):.3g} /基因组/代"
                  f"（{plan['m_on_source']}）")
+        cal = plan.get("calibration")
+        if cal:
+            n_mk, sp = cal.get("n", 0), cal.get("spread", 1.0)
+            if n_mk < 2:
+                verdict = ("⚠ 只有 1 个标记——“每碱基率均匀”假设**未检验**，"
+                           "μ_perbp 完全由该标记的 T_eff 决定")
+            elif sp <= 2.0:
+                verdict = "✅ 跨标记一致（≤2×），均匀假设成立"
+            else:
+                verdict = ("❌ 跨标记离散 >2×——先查 T_eff/机制（外排、多拷贝 rRNA、"
+                           "酶灭活），再谈 μ_perbp × G")
+            if n_mk < 2:
+                L.append(f"  标记链：{n_mk} 个标记｜{verdict}")
+            else:
+                L.append(f"  标记链：{n_mk} 个标记，跨标记离散 {sp:.2f}×｜{verdict}")
+            if n_mk >= 2:
+                L.append("  逐标记 μ/T_eff 相对斜率：" + "，".join(
+                    f"{m['name']} {m['ratio']:.2f}×" for m in cal.get("markers", [])))
         L.append("")
     L.append("一、各档 f_step（账本 records）")
     cur = None

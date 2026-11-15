@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from windowcalc.fstep import newcombe_diff, render, run_step, wilson_ci
+from windowcalc.fstep import newcombe_diff, wilson_ci
 
 
 def test_wilson_known_values():
@@ -32,24 +32,3 @@ def test_newcombe_diff_known_case():
     d, lo, hi = newcombe_diff(post, pre)
     assert d == pytest.approx(post[0])
     assert 0.0 <= lo <= d <= hi
-
-
-def test_run_step_red_on_background():
-    """f_pre ≥ 0.5×f_post → 背景淹没红灯（protocol-fstep.md §3）。"""
-    r = run_step("1", [("pre", 1e9, 10), ("post", 1e9, 12)])
-    assert r["red"]
-    assert r["f_step"] == pytest.approx(max(0.0, r["f_post"][0] - r["f_pre"][0]))
-
-
-def test_run_step_normal_and_paste_line():
-    r = run_step("1", [("pre", 3e8, 0), ("post", 3e8, 12)])
-    assert not r["red"]
-    assert r["f_step"] == pytest.approx(4e-8, rel=1e-6)
-    text = render([r])
-    assert "--f-step 4e-08" in text
-    assert "背景淹没" not in text
-
-
-def test_run_step_requires_both_sides():
-    with pytest.raises(ValueError):
-        run_step("1", [("post", 3e8, 12)])
