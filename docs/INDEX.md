@@ -62,4 +62,5 @@
 - 命令用法：`references/commands.md`（9 个子命令逐条）
 - 领域护栏（agent 必问清单）：`references/guardrails.md`
 - 多靶点接入：`references/multitarget-intake.md` · `references/guardrails.md` §4
+- 概念答疑（PAP 尾部五问：定义/测量/文献/预测时序/不涂板的代价）：`references/faq-pap.md`
 - 三张符号化配图（不含任何数值）：`figures/`——周期结构、两种传代拓扑、两个决策

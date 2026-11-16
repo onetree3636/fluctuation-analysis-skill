@@ -73,6 +73,7 @@ allowed-tools: Bash Read Write Edit Glob Grep
 | 用一种标记测速、想外推到另一种 | 先读 `references/markers.md`，走 4 问检查清单；**不得直接把 μ_X 填成 μ_supply** | 该文档 |
 | **多靶点/膜活性药：渐升怎么规划、乘客多少** | **先过 j 三问**（表后）→ 按 `references/multitarget-intake.md` 问齐实测值（**PAP 板 / 标定标记 / k·capacity·Nt**）→ `multitarget --records …`（乘客速率：`--markers` 标记链 或 `--m-on` 直给）；先过 `references/guardrails.md` §4（G16–G20）。**没有账本时不要直接要 `--records`**——先按 `docs/protocol-execution.md` §1.5 的 S0/S1 清单（MIC → 基线梯度 → c₁ → 首窗 → 7 块板） | `docs/protocol-ramp.md` |
 | **多靶点：试管与平板之间怎么倒（涂多少 / 剩的去哪 / 板还是液传代 / 能不能不等板）** | 按 `docs/protocol-execution.md` 的决策树给：涂板比例由克隆数反算、剩余五去处、拓扑二选一、并行四条护栏 | `docs/protocol-execution.md` |
+| **PAP 是什么 / 怎么测 / 有文献吗 / 板没出结果怎么预测下一档 / 不涂板直接液接液行不行** | 按 `references/faq-pap.md` 五问逐条答：Q1 定义与 δ 含义 · Q2 三个测量时机与板量 · Q3 文献锚点（含"尾部 log-线性未钉 DOI"的坦白）· Q4 预测/转接/审计三时刻拆解 · Q5 液接液✓与零涂板的五项损失 + 三档配置 | `references/faq-pap.md` |
 
 
 ### j 三问——任何窗口设计前必过（决定实验形状）
@@ -155,6 +156,7 @@ mutator 会改道（pbio.3001878）——单步效应按实测走，文献只定
   周期结构 / 两种传代拓扑 / 两个决策。用户问"一个浓度周期长什么样"时，展示
   `figures/cycle-liquid-propagation.png` 并按 `protocol-execution.md` 解读。
 - **`references/`（agent 专用）**：`commands.md`（9 个子命令逐条）· `guardrails.md`（必问清单）·
-  `markers.md`（标记外推）· `multitarget-intake.md`（多靶点接入）· `guardrails.md` §0（命令→该查哪几条）·
+  `markers.md`（标记外推）· `multitarget-intake.md`（多靶点接入）· `faq-pap.md`（PAP 五问：定义/测量/文献/时序/不涂板的代价）·
+  `guardrails.md` §0（命令→该查哪几条）·
   `install.md` / `maintainer.md`（部署与发布）
 - 维护者自检 **28 项：环境**、入口自举、规范校验、**9 个子命令**、Excel、已知答案、端到端报告、文档一致性、错误路径、断链、多靶点缺参拦截、**通用性（无项目专属药物名/参数）**、**文档分级（横幅 + INDEX）**、**护栏覆盖（每个子命令都在 guardrails §0）**、**护栏反查（每个 G 编号都挂在 §0，无孤儿规则）**、**文档↔代码（参数名/常量/声称一致）**。
